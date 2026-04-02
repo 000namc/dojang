@@ -53,6 +53,7 @@ interface DojangState {
   selectExercise: (exerciseId: number) => Promise<void>;
   setEditorCode: (code: string) => void;
   runCode: () => Promise<void>;
+  runCodeRaw: (code: string) => Promise<ExecuteResult>;
   submitAttempt: () => Promise<void>;
   loadKnowledge: () => Promise<void>;
   selectCard: (id: number) => Promise<void>;
@@ -183,6 +184,19 @@ export const useStore = create<DojangState>((set, get) => ({
           rows: null,
         },
       });
+    } finally {
+      set({ isExecuting: false });
+    }
+  },
+
+  runCodeRaw: async (code: string): Promise<ExecuteResult> => {
+    const { currentDomain } = get();
+    if (!currentDomain) throw new Error("No domain selected");
+    set({ isExecuting: true });
+    try {
+      const result = await api.executeCode(currentDomain.id, code);
+      set({ lastResult: result });
+      return result;
     } finally {
       set({ isExecuting: false });
     }
