@@ -1,26 +1,27 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { cn } from "../lib/cn";
-import { RotateCcw } from "lucide-react";
+import { Play, RotateCcw } from "lucide-react";
 
 export default function TerminalPanel({ className }: { className?: string }) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
   const [connected, setConnected] = useState(false);
+  const [started, setStarted] = useState(false);
 
-  const connect = () => {
+  // Actually open terminal + WS after DOM is ready
+  useEffect(() => {
+    if (!started || !terminalRef.current) return;
+
     // Cleanup previous
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
-    if (termRef.current) {
-      termRef.current.dispose();
-    }
+    cleanupRef.current?.();
+    wsRef.current?.close();
+    termRef.current?.dispose();
 
     const term = new Terminal({
       cursorBlink: true,
@@ -45,27 +46,20 @@ export default function TerminalPanel({ className }: { className?: string }) {
     });
 
     const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
     term.loadAddon(fitAddon);
-    term.loadAddon(webLinksAddon);
-
+    term.loadAddon(new WebLinksAddon());
     termRef.current = term;
-    fitAddonRef.current = fitAddon;
 
-    if (terminalRef.current) {
-      term.open(terminalRef.current);
-      fitAddon.fit();
-    }
+    term.open(terminalRef.current);
+    fitAddon.fit();
 
-    // WebSocket connection
+    // WebSocket
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws/terminal`;
-    const ws = new WebSocket(wsUrl);
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/terminal`);
     wsRef.current = ws;
 
     ws.onopen = () => {
       setConnected(true);
-      // Send initial size
       const dims = fitAddon.proposeDimensions();
       if (dims) {
         ws.send(JSON.stringify({ type: "resize", cols: dims.cols, rows: dims.rows }));
@@ -74,9 +68,7 @@ export default function TerminalPanel({ className }: { className?: string }) {
 
     ws.onmessage = (event) => {
       if (event.data instanceof Blob) {
-        event.data.arrayBuffer().then((buf) => {
-          term.write(new Uint8Array(buf));
-        });
+        event.data.arrayBuffer().then((buf) => term.write(new Uint8Array(buf)));
       } else {
         term.write(event.data);
       }
@@ -84,21 +76,17 @@ export default function TerminalPanel({ className }: { className?: string }) {
 
     ws.onclose = () => {
       setConnected(false);
-      term.write("\r\n\x1b[90m[세션 종료]\x1b[0m\r\n");
+      term.write("\r\n\x1b[90m[session ended]\x1b[0m\r\n");
     };
 
-    ws.onerror = () => {
-      setConnected(false);
-    };
+    ws.onerror = () => setConnected(false);
 
-    // Send terminal input to WebSocket
     term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "input", data }));
       }
     });
 
-    // Handle resize
     const handleResize = () => {
       fitAddon.fit();
       const dims = fitAddon.proposeDimensions();
@@ -108,22 +96,24 @@ export default function TerminalPanel({ className }: { className?: string }) {
     };
 
     const resizeObserver = new ResizeObserver(handleResize);
-    if (terminalRef.current) {
-      resizeObserver.observe(terminalRef.current);
-    }
+    resizeObserver.observe(terminalRef.current);
 
-    return () => {
+    cleanupRef.current = () => {
       resizeObserver.disconnect();
+      ws.close();
+      term.dispose();
     };
-  };
 
-  useEffect(() => {
-    const cleanup = connect();
     return () => {
-      cleanup?.();
-      wsRef.current?.close();
-      termRef.current?.dispose();
+      cleanupRef.current?.();
+      cleanupRef.current = null;
     };
+  }, [started]);
+
+  const reconnect = useCallback(() => {
+    // Force re-mount by toggling started
+    setStarted(false);
+    setTimeout(() => setStarted(true), 50);
   }, []);
 
   return (
@@ -132,24 +122,40 @@ export default function TerminalPanel({ className }: { className?: string }) {
       <div className="flex items-center justify-between border-b border-gray-700 px-3 py-1.5">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-gray-400">Claude Code</span>
-          <span
-            className={cn(
-              "h-1.5 w-1.5 rounded-full",
-              connected ? "bg-green-400" : "bg-gray-500",
-            )}
-          />
+          {started && (
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                connected ? "bg-green-400" : "bg-gray-500",
+              )}
+            />
+          )}
         </div>
-        <button
-          onClick={connect}
-          className="rounded p-1 text-gray-500 hover:bg-gray-700 hover:text-gray-300"
-          title="새 세션"
-        >
-          <RotateCcw size={14} />
-        </button>
+        {started && (
+          <button
+            onClick={reconnect}
+            className="rounded p-1 text-gray-500 hover:bg-gray-700 hover:text-gray-300"
+            title="새 세션"
+          >
+            <RotateCcw size={14} />
+          </button>
+        )}
       </div>
 
-      {/* Terminal */}
-      <div ref={terminalRef} className="flex-1 min-h-0 p-1" />
+      {/* Terminal or start button */}
+      {!started ? (
+        <div className="flex-1 flex items-center justify-center">
+          <button
+            onClick={() => setStarted(true)}
+            className="flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 transition-colors"
+          >
+            <Play size={16} />
+            Claude Code 세션 시작
+          </button>
+        </div>
+      ) : (
+        <div ref={terminalRef} className="flex-1 min-h-0 p-1" />
+      )}
     </div>
   );
 }

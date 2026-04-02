@@ -10,3 +10,4 @@ static/
 *.egg-info/
 uv.lock
 .claude/
+package-lock.json
