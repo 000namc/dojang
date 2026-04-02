@@ -304,5 +304,7 @@
         }
       ]
     }
-  ]
+  ],
+  "name": "CLI 기초",
+  "description": "CLI 기초 커리큘럼"
 }

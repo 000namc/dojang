@@ -162,5 +162,7 @@
         }
       ]
     }
-  ]
+  ],
+  "name": "Git 기초",
+  "description": "Git 기초 커리큘럼"
 }

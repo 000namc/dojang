@@ -16,8 +16,31 @@ export async function getDomains(): Promise<Domain[]> {
   return data;
 }
 
-export async function getCurriculum(domainId: number): Promise<CurriculumTree> {
-  const { data } = await api.get(`/api/domains/${domainId}/curriculum`);
+// Curricula
+export interface Curriculum {
+  id: number;
+  domain_id: number;
+  name: string;
+  description: string;
+  is_default: number;
+}
+
+export async function listCurricula(domainId: number): Promise<Curriculum[]> {
+  const { data } = await api.get(`/api/domains/${domainId}/curricula`);
+  return data;
+}
+
+export async function createCurriculum(domainId: number, name: string, description = ""): Promise<{ id: number }> {
+  const { data } = await api.post(`/api/domains/${domainId}/curricula`, { name, description });
+  return data;
+}
+
+export async function deleteCurriculum(curriculumId: number): Promise<void> {
+  await api.delete(`/api/curricula/${curriculumId}`);
+}
+
+export async function getCurriculumTree(curriculumId: number): Promise<CurriculumTree> {
+  const { data } = await api.get(`/api/curricula/${curriculumId}/tree`);
   return data;
 }
 

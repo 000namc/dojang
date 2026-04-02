@@ -126,5 +126,7 @@
         }
       ]
     }
-  ]
+  ],
+  "name": "Docker 기초",
+  "description": "Docker 기초 커리큘럼"
 }

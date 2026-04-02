@@ -91,10 +91,9 @@ class ChatRequest(BaseModel):
 
 # --- Topic CRUD ---
 class CreateTopicRequest(BaseModel):
-    domain_id: int
+    curriculum_id: int
     name: str
     description: str = ""
-    after_topic_id: int | None = None
     parent_id: int | None = None
 
 

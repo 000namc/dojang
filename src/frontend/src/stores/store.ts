@@ -7,20 +7,21 @@ import type {
   AttemptResult,
 } from "../types";
 import * as api from "../api/client";
-import type { KnowledgeCard } from "../api/client";
+import type { Curriculum, KnowledgeCard } from "../api/client";
 
 export type AppMode = "practice" | "explore";
 
 interface DojangState {
-  // Mode
   mode: AppMode;
 
   // Domain
   domains: Domain[];
   currentDomain: Domain | null;
 
-  // Curriculum
-  curriculum: CurriculumTree | null;
+  // Curricula (multiple per domain)
+  curricula: Curriculum[];
+  currentCurriculumId: number | null;
+  curriculumTree: CurriculumTree | null;
   selectedExerciseId: number | null;
 
   // Exercise + Editor
@@ -30,39 +31,35 @@ interface DojangState {
   lastResult: ExecuteResult | null;
   lastAttempt: AttemptResult | null;
 
-  // Knowledge (explore mode)
+  // Knowledge
   knowledgeCards: KnowledgeCard[];
   selectedCardId: number | null;
   currentCard: KnowledgeCard | null;
   isEditingCard: boolean;
 
-  // Notify polling
+  // Polling
   _lastNotifyTs: number;
   _pollInterval: ReturnType<typeof setInterval> | null;
 
-  // Actions — mode
+  // Actions
   setMode: (mode: AppMode) => void;
-
-  // Actions — domain
   loadDomains: () => Promise<void>;
   selectDomain: (domainId: number) => Promise<void>;
-  refreshCurriculum: () => Promise<void>;
-
-  // Actions — exercise
+  loadCurricula: () => Promise<void>;
+  selectCurriculum: (curriculumId: number) => Promise<void>;
+  createCurriculum: (name: string) => Promise<void>;
+  deleteCurriculum: (curriculumId: number) => Promise<void>;
+  refreshCurriculumTree: () => Promise<void>;
   selectExercise: (exerciseId: number) => Promise<void>;
   setEditorCode: (code: string) => void;
   runCode: () => Promise<void>;
   submitAttempt: () => Promise<void>;
-
-  // Actions — knowledge
   loadKnowledge: () => Promise<void>;
   selectCard: (id: number) => Promise<void>;
   createCard: (title: string) => Promise<void>;
   saveCard: (id: number, updates: { title?: string; content?: string; tags?: string }) => Promise<void>;
   deleteCard: (id: number) => Promise<void>;
   setEditingCard: (editing: boolean) => void;
-
-  // Polling
   startNotifyPolling: () => void;
   stopNotifyPolling: () => void;
 }
@@ -71,7 +68,9 @@ export const useStore = create<DojangState>((set, get) => ({
   mode: "practice",
   domains: [],
   currentDomain: null,
-  curriculum: null,
+  curricula: [],
+  currentCurriculumId: null,
+  curriculumTree: null,
   selectedExerciseId: null,
   currentExercise: null,
   editorCode: "",
@@ -100,6 +99,9 @@ export const useStore = create<DojangState>((set, get) => ({
     const domain = domains.find((d) => d.id === domainId) || null;
     set({
       currentDomain: domain,
+      curricula: [],
+      currentCurriculumId: null,
+      curriculumTree: null,
       selectedExerciseId: null,
       currentExercise: null,
       editorCode: "",
@@ -107,18 +109,47 @@ export const useStore = create<DojangState>((set, get) => ({
       lastAttempt: null,
     });
     if (domain) {
-      const curriculum = await api.getCurriculum(domainId);
-      set({ curriculum });
+      await get().loadCurricula();
+      await get().loadKnowledge();
     }
-    // Also refresh knowledge for the domain
-    await get().loadKnowledge();
   },
 
-  refreshCurriculum: async () => {
+  loadCurricula: async () => {
     const { currentDomain } = get();
     if (!currentDomain) return;
-    const curriculum = await api.getCurriculum(currentDomain.id);
-    set({ curriculum });
+    const curricula = await api.listCurricula(currentDomain.id);
+    set({ curricula });
+    // Auto-select default or first
+    if (curricula.length > 0) {
+      const def = curricula.find((c) => c.is_default) || curricula[0];
+      await get().selectCurriculum(def.id);
+    }
+  },
+
+  selectCurriculum: async (curriculumId: number) => {
+    set({ currentCurriculumId: curriculumId, selectedExerciseId: null, currentExercise: null });
+    const tree = await api.getCurriculumTree(curriculumId);
+    set({ curriculumTree: tree });
+  },
+
+  createCurriculum: async (name: string) => {
+    const { currentDomain } = get();
+    if (!currentDomain) return;
+    const { id } = await api.createCurriculum(currentDomain.id, name);
+    await get().loadCurricula();
+    await get().selectCurriculum(id);
+  },
+
+  deleteCurriculum: async (curriculumId: number) => {
+    await api.deleteCurriculum(curriculumId);
+    await get().loadCurricula();
+  },
+
+  refreshCurriculumTree: async () => {
+    const { currentCurriculumId } = get();
+    if (!currentCurriculumId) return;
+    const tree = await api.getCurriculumTree(currentCurriculumId);
+    set({ curriculumTree: tree });
   },
 
   selectExercise: async (exerciseId: number) => {
@@ -133,7 +164,7 @@ export const useStore = create<DojangState>((set, get) => ({
     });
   },
 
-  setEditorCode: (code: string) => set({ editorCode: code }),
+  setEditorCode: (code) => set({ editorCode: code }),
 
   runCode: async () => {
     const { currentDomain, editorCode } = get();
@@ -164,51 +195,37 @@ export const useStore = create<DojangState>((set, get) => ({
     try {
       const result = await api.submitAttempt(selectedExerciseId, editorCode);
       let execResult: ExecuteResult | null = null;
-      try {
-        execResult = JSON.parse(result.result);
-      } catch {}
+      try { execResult = JSON.parse(result.result); } catch {}
       set({ lastAttempt: result, lastResult: execResult });
-      await get().refreshCurriculum();
+      await get().refreshCurriculumTree();
     } catch (e: any) {
       set({
-        lastAttempt: {
-          id: 0,
-          is_correct: false,
-          result: "",
-          feedback: e.response?.data?.detail || e.message,
-        },
+        lastAttempt: { id: 0, is_correct: false, result: "", feedback: e.response?.data?.detail || e.message },
       });
     } finally {
       set({ isExecuting: false });
     }
   },
 
-  // Knowledge
   loadKnowledge: async () => {
     const { currentDomain } = get();
     try {
       const cards = await api.listKnowledge(currentDomain?.id);
       set({ knowledgeCards: cards });
-    } catch {
-      set({ knowledgeCards: [] });
-    }
+    } catch { set({ knowledgeCards: [] }); }
   },
 
-  selectCard: async (id: number) => {
+  selectCard: async (id) => {
     try {
       const card = await api.getKnowledge(id);
       set({ selectedCardId: id, currentCard: card, isEditingCard: false, mode: "explore" });
     } catch {}
   },
 
-  createCard: async (title: string) => {
+  createCard: async (title) => {
     const { currentDomain } = get();
     try {
-      const { id } = await api.createKnowledge({
-        domain_id: currentDomain?.id,
-        title,
-        content: "",
-      });
+      const { id } = await api.createKnowledge({ domain_id: currentDomain?.id, title, content: "" });
       await get().loadKnowledge();
       await get().selectCard(id);
       set({ isEditingCard: true });
@@ -219,7 +236,6 @@ export const useStore = create<DojangState>((set, get) => ({
     try {
       await api.updateKnowledge(id, updates);
       await get().loadKnowledge();
-      // Refresh current card
       const card = await api.getKnowledge(id);
       set({ currentCard: card, isEditingCard: false });
     } catch {}
@@ -236,8 +252,7 @@ export const useStore = create<DojangState>((set, get) => ({
   setEditingCard: (editing) => set({ isEditingCard: editing }),
 
   startNotifyPolling: () => {
-    const existing = get()._pollInterval;
-    if (existing) return;
+    if (get()._pollInterval) return;
     const interval = setInterval(async () => {
       const { _lastNotifyTs } = get();
       try {
@@ -245,7 +260,7 @@ export const useStore = create<DojangState>((set, get) => ({
         if (data.event) {
           set({ _lastNotifyTs: data.ts });
           if (data.event === "curriculum_updated" || data.event === "exercise_created") {
-            await get().refreshCurriculum();
+            await get().refreshCurriculumTree();
           }
           if (data.event === "knowledge_updated") {
             await get().loadKnowledge();
@@ -258,9 +273,6 @@ export const useStore = create<DojangState>((set, get) => ({
 
   stopNotifyPolling: () => {
     const { _pollInterval } = get();
-    if (_pollInterval) {
-      clearInterval(_pollInterval);
-      set({ _pollInterval: null });
-    }
+    if (_pollInterval) { clearInterval(_pollInterval); set({ _pollInterval: null }); }
   },
 }));

@@ -66,7 +66,8 @@ async def submit_attempt(
     cursor = await db.execute(
         "SELECT e.*, d.name as domain_name, d.container_name "
         "FROM exercises e JOIN topics t ON e.topic_id = t.id "
-        "JOIN domains d ON t.domain_id = d.id WHERE e.id = ?",
+        "JOIN curricula c ON t.curriculum_id = c.id "
+        "JOIN domains d ON c.domain_id = d.id WHERE e.id = ?",
         (exercise_id,),
     )
     exercise = await cursor.fetchone()

@@ -45,8 +45,17 @@ async def seed_if_empty(db_path: str) -> None:
 
             curriculum = json.loads(curriculum_path.read_text())
 
+            # Create default curriculum for this domain
+            cur_name = curriculum.get("name", f"{domain_name} 기초")
+            cur_desc = curriculum.get("description", f"{domain_name} 기본 커리큘럼")
+            cursor = await db.execute(
+                "INSERT INTO curricula (domain_id, name, description, is_default) VALUES (?, ?, ?, 1)",
+                (domain_id, cur_name, cur_desc),
+            )
+            curriculum_id = cursor.lastrowid
+
             for topic_data in curriculum.get("topics", []):
-                await _insert_topic(db, domain_id, topic_data, parent_id=None)
+                await _insert_topic(db, curriculum_id, topic_data, parent_id=None)
 
             await db.commit()
     finally:
@@ -55,14 +64,14 @@ async def seed_if_empty(db_path: str) -> None:
 
 async def _insert_topic(
     db: aiosqlite.Connection,
-    domain_id: int,
+    curriculum_id: int,
     topic_data: dict,
     parent_id: int | None,
 ) -> None:
     cursor = await db.execute(
-        "INSERT INTO topics (domain_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO topics (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
         (
-            domain_id,
+            curriculum_id,
             topic_data["name"],
             topic_data.get("description", ""),
             topic_data.get("order", 0),
@@ -87,4 +96,4 @@ async def _insert_topic(
         )
 
     for child in topic_data.get("children", []):
-        await _insert_topic(db, domain_id, child, parent_id=topic_id)
+        await _insert_topic(db, curriculum_id, child, parent_id=topic_id)

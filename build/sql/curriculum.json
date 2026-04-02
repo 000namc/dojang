@@ -233,5 +233,7 @@
         }
       ]
     }
-  ]
+  ],
+  "name": "SQL 기초",
+  "description": "SQL 기초 커리큘럼"
 }

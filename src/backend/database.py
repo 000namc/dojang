@@ -9,9 +9,18 @@ CREATE TABLE IF NOT EXISTS domains (
     container_name TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS topics (
+CREATE TABLE IF NOT EXISTS curricula (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     domain_id INTEGER NOT NULL REFERENCES domains(id),
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    is_default INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS topics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    curriculum_id INTEGER NOT NULL REFERENCES curricula(id),
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
     order_num INTEGER NOT NULL DEFAULT 0,

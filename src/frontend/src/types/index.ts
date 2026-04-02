@@ -25,7 +25,7 @@ export interface Topic {
 }
 
 export interface CurriculumTree {
-  domain: Domain;
+  curriculum: { id: number; domain_id: number; name: string; description: string; domain_name: string; container_name: string };
   topics: Topic[];
 }
 
