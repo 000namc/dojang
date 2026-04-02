@@ -1,0 +1,166 @@
+{
+  "topics": [
+    {
+      "name": "기본 명령어",
+      "description": "init, add, commit, status, log",
+      "order": 1,
+      "exercises": [
+        {
+          "title": "저장소 상태 확인",
+          "description": "`basic` 저장소의 현재 상태를 확인하세요.\n\n`git status` 명령어를 사용합니다.",
+          "initial_code": "git status",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        },
+        {
+          "title": "커밋 히스토리 보기",
+          "description": "`basic` 저장소의 **커밋 히스토리**를 한 줄씩 확인하세요.",
+          "initial_code": "git log --oneline",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        },
+        {
+          "title": "파일 추가하고 커밋",
+          "description": "`basic` 저장소에 `notes.txt` 파일을 생성하고 커밋하세요.\n\n1. `echo \"my notes\" > notes.txt`\n2. `git add notes.txt`\n3. `git commit -m \"add notes\"`",
+          "initial_code": "echo \"my notes\" > notes.txt && git add notes.txt && git commit -m \"add notes\"",
+          "check_type": "script_check",
+          "check_value": "test -f notes.txt && git log --oneline | grep -q 'add notes'",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "브랜치",
+      "description": "branch, checkout, switch",
+      "order": 2,
+      "exercises": [
+        {
+          "title": "브랜치 목록 확인",
+          "description": "`branching` 저장소의 **모든 브랜치**를 확인하세요.",
+          "initial_code": "git branch",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        },
+        {
+          "title": "새 브랜치 생성",
+          "description": "`branching` 저장소에서 `dev`라는 새 브랜치를 만드세요.",
+          "initial_code": "git branch",
+          "check_type": "script_check",
+          "check_value": "git branch | grep -q dev",
+          "difficulty": 1
+        },
+        {
+          "title": "브랜치 전환",
+          "description": "`branching` 저장소에서 `feature` 브랜치로 전환하고 파일 내용을 확인하세요.",
+          "initial_code": "git checkout feature && cat file.txt",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "머지 (merge)",
+      "description": "fast-forward, 3-way merge",
+      "order": 3,
+      "exercises": [
+        {
+          "title": "Fast-forward 머지",
+          "description": "`branching` 저장소에서 `feature` 브랜치를 `main`에 머지하세요.\n\n1. `main` 브랜치에 있는지 확인\n2. `git merge feature`",
+          "initial_code": "git checkout main && git merge feature",
+          "check_type": "script_check",
+          "check_value": "git log --oneline | grep -q 'feature'",
+          "difficulty": 2
+        },
+        {
+          "title": "머지 후 로그 확인",
+          "description": "머지 후 `git log --oneline --graph`로 히스토리를 확인하세요.",
+          "initial_code": "git log --oneline --graph",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "충돌 해결",
+      "description": "merge conflict 해결",
+      "order": 4,
+      "exercises": [
+        {
+          "title": "충돌 상황 확인",
+          "description": "`conflict` 저장소에서 `branch-a`를 `main`에 머지하면 **충돌**이 발생합니다.\n\n먼저 머지를 시도하고 충돌 상태를 확인하세요.",
+          "initial_code": "git merge branch-a; git status",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 2
+        },
+        {
+          "title": "충돌 해결하기",
+          "description": "`conflict` 저장소에서 충돌을 해결하세요.\n\n1. 충돌 파일(`shared.txt`)을 편집하여 원하는 내용만 남기세요\n2. `git add shared.txt`\n3. `git commit -m \"resolve conflict\"`",
+          "initial_code": "echo 'resolved content' > shared.txt && git add shared.txt && git commit -m 'resolve conflict'",
+          "check_type": "script_check",
+          "check_value": "git log --oneline | grep -q 'resolve'",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "name": "리베이스 (rebase)",
+      "description": "rebase로 히스토리 정리",
+      "order": 5,
+      "exercises": [
+        {
+          "title": "리베이스 전 상태 확인",
+          "description": "`rebase` 저장소에서 `topic` 브랜치와 `main` 브랜치의 로그를 비교하세요.",
+          "initial_code": "git log --oneline --all --graph",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        },
+        {
+          "title": "리베이스 실행",
+          "description": "`rebase` 저장소에서 `topic` 브랜치를 `main` 위로 리베이스하세요.\n\n1. `git checkout topic`\n2. `git rebase main`",
+          "initial_code": "git checkout topic && git rebase main",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "name": "로그와 Diff",
+      "description": "log, diff, show, blame",
+      "order": 6,
+      "exercises": [
+        {
+          "title": "커밋 상세 보기",
+          "description": "`history` 저장소에서 **가장 최근 커밋**의 변경 내용을 확인하세요.",
+          "initial_code": "git show HEAD",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        },
+        {
+          "title": "파일 변경 이력",
+          "description": "`history` 저장소에서 `app.py` 파일의 **변경 이력**을 확인하세요.",
+          "initial_code": "git log --oneline -- app.py",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        },
+        {
+          "title": "두 커밋 간 차이",
+          "description": "`history` 저장소에서 **첫 번째 커밋과 마지막 커밋** 사이의 `app.py` 변경을 확인하세요.\n\nHint: `git diff <commit1> <commit2> -- app.py`",
+          "initial_code": "git log --oneline",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 2
+        }
+      ]
+    }
+  ]
+}

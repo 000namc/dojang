@@ -1,0 +1,130 @@
+{
+  "topics": [
+    {
+      "name": "Docker 기초",
+      "description": "이미지, 컨테이너, 레지스트리 개념",
+      "order": 1,
+      "exercises": [
+        {
+          "title": "Docker 버전 확인",
+          "description": "Docker CLI 버전을 확인하세요.",
+          "initial_code": "docker version",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "로컬 이미지 목록",
+          "description": "현재 로컬에 있는 **Docker 이미지 목록**을 확인하세요.",
+          "initial_code": "docker images",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "실행 중인 컨테이너",
+          "description": "현재 **실행 중인 컨테이너** 목록을 확인하세요.\n\n모든 컨테이너(중지 포함)를 보려면 어떤 옵션을 추가해야 할까요?",
+          "initial_code": "docker ps",
+          "check_type": "ai_check",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "이미지 관리",
+      "description": "pull, build, tag, push",
+      "order": 2,
+      "exercises": [
+        {
+          "title": "이미지 풀 받기",
+          "description": "`alpine:3.19` 이미지를 풀 받으세요.",
+          "initial_code": "docker pull",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "이미지 상세 정보",
+          "description": "`alpine:3.19` 이미지의 **상세 정보**를 확인하세요.\n\n크기, 레이어 수, 아키텍처 등을 볼 수 있습니다.",
+          "initial_code": "docker inspect",
+          "check_type": "ai_check",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "컨테이너 실행",
+      "description": "run, exec, logs, stop, rm",
+      "order": 3,
+      "exercises": [
+        {
+          "title": "컨테이너 실행",
+          "description": "`alpine` 이미지로 `echo 'Hello Docker!'`를 실행하세요.\n\n실행 후 자동으로 삭제되도록 하세요.",
+          "initial_code": "docker run",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "백그라운드 실행",
+          "description": "`nginx:alpine`을 **백그라운드**로 실행하고 `my-nginx`라는 이름을 지정하세요.\n\n그 후 `docker ps`로 확인하세요.",
+          "initial_code": "docker run",
+          "check_type": "ai_check",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "Dockerfile 이해",
+      "description": "FROM, RUN, COPY, CMD, EXPOSE",
+      "order": 4,
+      "exercises": [
+        {
+          "title": "Dockerfile 읽기",
+          "description": "`/workspace/examples/Dockerfile.simple`의 내용을 확인하고 각 줄이 무엇을 하는지 이해하세요.",
+          "initial_code": "cat /workspace/examples/Dockerfile.simple",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "이미지 빌드",
+          "description": "`/workspace/examples/Dockerfile.simple`을 사용해서 `my-app:v1`이라는 이미지를 빌드하세요.",
+          "initial_code": "docker build",
+          "check_type": "ai_check",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "볼륨과 네트워크",
+      "description": "volume, network, port mapping",
+      "order": 5,
+      "exercises": [
+        {
+          "title": "볼륨 목록",
+          "description": "Docker **볼륨 목록**을 확인하세요.",
+          "initial_code": "docker volume",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "네트워크 목록",
+          "description": "Docker **네트워크 목록**을 확인하세요.",
+          "initial_code": "docker network",
+          "check_type": "ai_check",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "Docker Compose",
+      "description": "compose up/down, 서비스 관리",
+      "order": 6,
+      "exercises": [
+        {
+          "title": "Compose 파일 읽기",
+          "description": "`/workspace/examples/docker-compose.yml`의 내용을 확인하세요.\n\n어떤 서비스가 정의되어 있나요?",
+          "initial_code": "cat /workspace/examples/docker-compose.yml",
+          "check_type": "ai_check",
+          "difficulty": 1
+        }
+      ]
+    }
+  ]
+}

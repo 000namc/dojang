@@ -1,0 +1,308 @@
+{
+  "topics": [
+    {
+      "name": "첫 걸음: 여기가 어디지?",
+      "description": "pwd, ls, cd — 터미널 기본 탐색",
+      "order": 1,
+      "exercises": [
+        {
+          "title": "현재 위치 확인",
+          "description": "터미널에서 **지금 내가 어디에 있는지** 확인하세요.\n\nHint: 현재 작업 디렉토리를 출력하는 명령어를 사용하세요.",
+          "initial_code": "",
+          "check_type": "output_match",
+          "check_value": "/workspace",
+          "difficulty": 1
+        },
+        {
+          "title": "파일 목록 보기",
+          "description": "현재 디렉토리에 **어떤 파일과 폴더**가 있는지 확인하세요.\n\nHint: `ls` 명령어를 사용하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "숨김 파일까지 보기",
+          "description": "현재 디렉토리의 **숨김 파일을 포함한 모든 파일**을 상세 목록으로 보세요.\n\nHint: `ls`에 옵션을 추가하세요. `-a`는 숨김 파일, `-l`은 상세 정보를 보여줍니다.",
+          "initial_code": "ls",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "디렉토리 이동하기",
+          "description": "`project` 폴더로 이동한 뒤, 현재 위치를 출력하세요.\n\n`/workspace/project`가 출력되어야 합니다.",
+          "initial_code": "",
+          "check_type": "output_match",
+          "check_value": "/workspace/project",
+          "difficulty": 1
+        },
+        {
+          "title": "상위 디렉토리로 돌아가기",
+          "description": "`project/src` 폴더로 이동한 뒤, **두 단계 위** (`/workspace`)로 돌아가서 현재 위치를 출력하세요.\n\nHint: `..`은 상위 디렉토리를 의미합니다.",
+          "initial_code": "",
+          "check_type": "output_match",
+          "check_value": "/workspace",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "만들고 지우기",
+      "description": "mkdir, touch, rm, rmdir — 파일과 폴더 생성/삭제",
+      "order": 2,
+      "exercises": [
+        {
+          "title": "폴더 만들기",
+          "description": "`mydir`이라는 이름의 새 폴더를 만드세요.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "test -d mydir",
+          "difficulty": 1
+        },
+        {
+          "title": "빈 파일 만들기",
+          "description": "`memo.txt`라는 빈 파일을 만드세요.\n\nHint: `touch` 명령어를 사용하세요.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "test -f memo.txt",
+          "difficulty": 1
+        },
+        {
+          "title": "중첩 폴더 한 번에 만들기",
+          "description": "`a/b/c` 경로의 폴더를 한 번에 만드세요.\n\nHint: `mkdir`에 `-p` 옵션을 사용하면 중간 폴더도 함께 만들어줍니다.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "test -d a/b/c",
+          "difficulty": 1
+        },
+        {
+          "title": "파일 삭제하기",
+          "description": "`temp.txt` 파일을 삭제하세요.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "! test -f temp.txt",
+          "difficulty": 1
+        },
+        {
+          "title": "폴더 삭제하기",
+          "description": "`trash` 폴더와 그 안의 모든 내용을 삭제하세요.\n\nHint: `rm`에 `-r` 옵션을 사용하면 폴더 전체를 삭제합니다.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "! test -d trash",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "파일 읽기",
+      "description": "cat, head, tail — 파일 내용 확인",
+      "order": 3,
+      "exercises": [
+        {
+          "title": "파일 내용 보기",
+          "description": "`hello.txt`의 내용을 출력하세요.",
+          "initial_code": "",
+          "check_type": "output_match",
+          "check_value": "hello world",
+          "difficulty": 1
+        },
+        {
+          "title": "처음 3줄만 보기",
+          "description": "`server.log`의 **처음 3줄**만 출력하세요.\n\nHint: `head` 명령어에 `-n` 옵션을 사용하세요.",
+          "initial_code": "",
+          "check_type": "output_match",
+          "check_value": "2024-01-15 09:00:00 INFO: server started\n2024-01-15 09:01:23 INFO: user login - alice\n2024-01-15 09:02:45 WARN: slow query detected (3.2s)",
+          "difficulty": 1
+        },
+        {
+          "title": "마지막 2줄만 보기",
+          "description": "`server.log`의 **마지막 2줄**만 출력하세요.\n\nHint: `tail` 명령어에 `-n` 옵션을 사용하세요.",
+          "initial_code": "",
+          "check_type": "output_match",
+          "check_value": "2024-01-15 09:15:00 INFO: backup completed\n2024-01-15 09:20:00 ERROR: connection refused - db timeout",
+          "difficulty": 1
+        },
+        {
+          "title": "CSV 파일 확인하기",
+          "description": "`data.csv`의 전체 내용을 출력하세요.",
+          "initial_code": "",
+          "check_type": "output_match",
+          "check_value": "name,age,city\nAlice,30,Seoul\nBob,25,Busan\nCharlie,35,Seoul\nDave,28,Daegu\nEve,32,Seoul",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "복사와 이동",
+      "description": "cp, mv — 파일 복사, 이동, 이름 변경",
+      "order": 4,
+      "exercises": [
+        {
+          "title": "파일 복사하기",
+          "description": "`hello.txt`를 `hello_backup.txt`로 복사하세요.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "test -f hello_backup.txt && test -f hello.txt",
+          "difficulty": 1
+        },
+        {
+          "title": "파일 이름 변경하기",
+          "description": "`notes.txt`의 이름을 `memo.txt`로 변경하세요.\n\nHint: `mv` 명령어는 이동뿐 아니라 이름 변경에도 사용됩니다.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "test -f memo.txt && ! test -f notes.txt",
+          "difficulty": 1
+        },
+        {
+          "title": "폴더에 파일 복사하기",
+          "description": "`backup` 디렉토리를 만들고, `data.csv`를 그 안에 복사하세요.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "test -f backup/data.csv && test -f data.csv",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "파일 찾기",
+      "description": "find, ls — 파일 검색과 구조 파악",
+      "order": 5,
+      "exercises": [
+        {
+          "title": "하위 폴더까지 목록 보기",
+          "description": "`project` 디렉토리의 **모든 하위 파일과 폴더**를 재귀적으로 보세요.\n\nHint: `ls -R` 또는 `find`를 사용하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": ".txt 파일 찾기",
+          "description": "`/workspace` 아래에서 **`.txt` 확장자**를 가진 모든 파일을 찾으세요.\n\nHint: `find` 명령어에 `-name` 옵션을 사용하세요.",
+          "initial_code": "find",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "디렉토리만 찾기",
+          "description": "`/workspace` 아래에서 **디렉토리만** 찾아서 출력하세요.\n\nHint: `find`의 `-type d` 옵션을 사용하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "텍스트 검색",
+      "description": "grep, wc — 파일 안에서 원하는 내용 찾기",
+      "order": 6,
+      "exercises": [
+        {
+          "title": "ERROR 찾기",
+          "description": "`server.log`에서 **ERROR**가 포함된 줄만 출력하세요.\n\nHint: `grep` 명령어를 사용하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "서울 사람 찾기",
+          "description": "`data.csv`에서 **Seoul**이 포함된 줄을 출력하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "줄 수 세기",
+          "description": "`server.log`의 **총 줄 수**를 출력하세요.\n\nHint: `wc` 명령어에 `-l` 옵션을 사용하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "ERROR 횟수 세기",
+          "description": "`server.log`에서 **ERROR**가 포함된 줄이 **몇 개인지** 숫자만 출력하세요.\n\nHint: `grep`에 `-c` 옵션을 사용하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "파이프와 리다이렉션",
+      "description": "pipe(|), >, >> — 명령어 조합의 힘",
+      "order": 7,
+      "exercises": [
+        {
+          "title": "파이프 기초",
+          "description": "`data.csv`에서 **Seoul이 포함된 줄의 개수**를 파이프로 구하세요.\n\nHint: `grep`과 `wc -l`을 `|`로 연결하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 2
+        },
+        {
+          "title": "결과를 파일에 저장",
+          "description": "`server.log`에서 ERROR 줄만 추출하여 `errors.txt`에 저장하세요.\n\n저장 후 `cat errors.txt`로 확인하세요.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "test -f errors.txt && grep -c ERROR errors.txt | grep -q 3",
+          "difficulty": 2
+        },
+        {
+          "title": "파일에 내용 추가하기",
+          "description": "`memo.txt`에 `\"first line\"`을 쓴 뒤, `\"second line\"`을 **추가**하세요.\n\n`cat memo.txt` 결과가 두 줄이어야 합니다.\n\nHint: `>`는 덮어쓰기, `>>`는 추가입니다.",
+          "initial_code": "",
+          "check_type": "script_check",
+          "check_value": "test $(wc -l < memo.txt) -eq 2 && head -1 memo.txt | grep -q 'first line' && tail -1 memo.txt | grep -q 'second line'",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "텍스트 가공",
+      "description": "sort, uniq, cut, awk — 데이터 정리 및 추출",
+      "order": 8,
+      "exercises": [
+        {
+          "title": "나이 순으로 정렬",
+          "description": "`data.csv`에서 **헤더를 제외**하고 **나이(2번째 컬럼) 순으로 정렬**해서 출력하세요.\n\nHint: `tail -n +2`로 헤더를 건너뛰고, `sort -t, -k2 -n`으로 정렬하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 2
+        },
+        {
+          "title": "서울 사람 이름만 추출",
+          "description": "`data.csv`에서 **Seoul**에 사는 사람의 **이름만** 출력하세요.\n\nHint: `grep`과 `cut` 또는 `awk`를 조합하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 2
+        },
+        {
+          "title": "로그 레벨별 횟수",
+          "description": "`server.log`에서 **로그 레벨(INFO, WARN, ERROR)별 횟수**를 세세요.\n\n예: `3 ERROR`, `4 INFO` 같은 형태.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "name": "JSON 처리 (jq)",
+      "description": "jq로 JSON 파싱",
+      "order": 9,
+      "exercises": [
+        {
+          "title": "JSON 값 읽기",
+          "description": "`project/config.json`에서 **name** 필드의 값을 출력하세요.\n\nHint: `jq` 명령어를 사용하세요.",
+          "initial_code": "cat project/config.json | jq",
+          "check_type": "ai_check",
+          "difficulty": 1
+        },
+        {
+          "title": "JSON 여러 필드 읽기",
+          "description": "`users.json`에서 **모든 사용자의 이름(name)만** 출력하세요.\n\nHint: `jq '.[].name'` 형태를 사용하세요.",
+          "initial_code": "cat users.json | jq",
+          "check_type": "ai_check",
+          "difficulty": 2
+        }
+      ]
+    }
+  ]
+}

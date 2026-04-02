@@ -1,0 +1,25 @@
+services:
+  dojang-cli:
+    build: ./cli
+    container_name: dojang-cli
+
+  dojang-git:
+    build: ./git
+    container_name: dojang-git
+
+  dojang-docker:
+    build: ./docker
+    container_name: dojang-docker
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  dojang-sql:
+    build: ./sql
+    container_name: dojang-sql
+    ports:
+      - "13306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-pdojang"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

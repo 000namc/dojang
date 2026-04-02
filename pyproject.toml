@@ -1,0 +1,23 @@
+[project]
+name = "dojang"
+version = "0.1.0"
+description = "개인 맞춤 학습 플랫폼 — 도메인별 가상 작업공간 + AI 튜터"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "aiosqlite>=0.20",
+    "docker>=7.0",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "python-multipart>=0.0.18",
+    "websockets>=15.0",
+    "mcp[cli]>=1.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.28",
+]

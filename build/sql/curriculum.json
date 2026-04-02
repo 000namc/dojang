@@ -1,0 +1,237 @@
+{
+  "topics": [
+    {
+      "name": "SELECT 기초",
+      "description": "기본 조회, 컬럼 선택, 별칭",
+      "order": 1,
+      "exercises": [
+        {
+          "title": "모든 동물 조회",
+          "description": "`ANIMAL_INS` 테이블의 **모든 데이터**를 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT * FROM ANIMAL_INS",
+          "difficulty": 1
+        },
+        {
+          "title": "이름과 종류만 조회",
+          "description": "`ANIMAL_INS` 테이블에서 동물의 **이름(NAME)**과 **종류(ANIMAL_TYPE)**만 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT NAME, ANIMAL_TYPE FROM ANIMAL_INS",
+          "difficulty": 1
+        },
+        {
+          "title": "별칭 사용하기",
+          "description": "`FOOD_PRODUCT` 테이블에서 **상품명(PRODUCT_NAME)**을 `상품`, **가격(PRICE)**을 `가격`으로 별칭을 붙여 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT PRODUCT_NAME AS '상품', PRICE AS '가격' FROM FOOD_PRODUCT",
+          "difficulty": 1
+        },
+        {
+          "title": "중복 제거",
+          "description": "`ANIMAL_INS` 테이블에서 **동물의 종류(ANIMAL_TYPE)**를 중복 없이 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT DISTINCT ANIMAL_TYPE FROM ANIMAL_INS",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "WHERE 조건",
+      "description": "조건 필터링, NULL 처리, 논리 연산자",
+      "order": 2,
+      "exercises": [
+        {
+          "title": "아픈 동물 찾기",
+          "description": "`ANIMAL_INS` 테이블에서 **아픈 동물(INTAKE_CONDITION = 'Sick')**의 아이디와 이름을 조회하세요.\n\n결과는 아이디 순으로 정렬하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT ANIMAL_ID, NAME FROM ANIMAL_INS WHERE INTAKE_CONDITION = 'Sick' ORDER BY ANIMAL_ID",
+          "difficulty": 1
+        },
+        {
+          "title": "이름이 없는 동물",
+          "description": "`ANIMAL_INS` 테이블에서 **이름이 없는(NULL)** 동물의 아이디를 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT ANIMAL_ID FROM ANIMAL_INS WHERE NAME IS NULL",
+          "difficulty": 1
+        },
+        {
+          "title": "이름이 있는 동물",
+          "description": "`ANIMAL_INS` 테이블에서 **이름이 있는** 동물의 아이디와 이름을 이름 순으로 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT ANIMAL_ID, NAME FROM ANIMAL_INS WHERE NAME IS NOT NULL ORDER BY NAME",
+          "difficulty": 1
+        },
+        {
+          "title": "비싼 식품 찾기",
+          "description": "`FOOD_PRODUCT` 테이블에서 **가격이 10000원 이상**인 식품의 이름과 가격을 가격 내림차순으로 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT PRODUCT_NAME, PRICE FROM FOOD_PRODUCT WHERE PRICE >= 10000 ORDER BY PRICE DESC",
+          "difficulty": 1
+        },
+        {
+          "title": "여러 조건 조합",
+          "description": "`ANIMAL_INS` 테이블에서 **고양이(Cat)** 중에서 **이름이 있고** **정상(Normal)** 상태인 동물을 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT ANIMAL_ID, NAME FROM ANIMAL_INS WHERE ANIMAL_TYPE = 'Cat' AND NAME IS NOT NULL AND INTAKE_CONDITION = 'Normal'",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "ORDER BY 정렬",
+      "description": "오름차순, 내림차순, 다중 컬럼 정렬",
+      "order": 3,
+      "exercises": [
+        {
+          "title": "역순 정렬",
+          "description": "`ANIMAL_INS` 테이블에서 모든 동물의 이름과 보호 시작일을 **이름은 역순**, 같으면 **보호 시작일은 순서대로** 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT NAME, DATETIME FROM ANIMAL_INS ORDER BY NAME DESC, DATETIME ASC",
+          "difficulty": 1
+        },
+        {
+          "title": "가장 먼저 들어온 동물",
+          "description": "`ANIMAL_INS` 테이블에서 **가장 먼저 보호소에 들어온** 동물의 이름을 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT NAME FROM ANIMAL_INS ORDER BY DATETIME ASC LIMIT 1",
+          "difficulty": 1
+        }
+      ]
+    },
+    {
+      "name": "집계 함수",
+      "description": "COUNT, SUM, AVG, MIN, MAX",
+      "order": 4,
+      "exercises": [
+        {
+          "title": "동물 수 세기",
+          "description": "`ANIMAL_INS` 테이블의 **전체 동물 수**를 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT COUNT(*) FROM ANIMAL_INS",
+          "difficulty": 1
+        },
+        {
+          "title": "중복 제거 후 세기",
+          "description": "`ANIMAL_INS` 테이블에서 **이름이 있는 동물**의 **이름 종류 수**(중복 제거)를 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT COUNT(DISTINCT NAME) FROM ANIMAL_INS WHERE NAME IS NOT NULL",
+          "difficulty": 2
+        },
+        {
+          "title": "카테고리별 평균 가격",
+          "description": "`FOOD_PRODUCT` 테이블에서 **카테고리(CATEGORY)별 평균 가격**을 조회하세요.\n\n평균 가격은 소수점 이하 반올림하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT CATEGORY, ROUND(AVG(PRICE)) AS AVG_PRICE FROM FOOD_PRODUCT GROUP BY CATEGORY",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "GROUP BY",
+      "description": "그룹핑, HAVING, 날짜 함수",
+      "order": 5,
+      "exercises": [
+        {
+          "title": "종류별 동물 수",
+          "description": "`ANIMAL_INS` 테이블에서 **종류(ANIMAL_TYPE)별 동물 수**를 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT ANIMAL_TYPE, COUNT(*) AS count FROM ANIMAL_INS GROUP BY ANIMAL_TYPE ORDER BY ANIMAL_TYPE",
+          "difficulty": 1
+        },
+        {
+          "title": "리뷰 2개 이상 작성자",
+          "description": "`REST_REVIEW` 테이블에서 **리뷰를 2개 이상 작성한** 회원의 ID와 리뷰 수를 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT MEMBER_ID, COUNT(*) AS REVIEW_COUNT FROM REST_REVIEW GROUP BY MEMBER_ID HAVING COUNT(*) >= 2",
+          "difficulty": 2
+        },
+        {
+          "title": "시간대별 입양",
+          "description": "`ANIMAL_OUTS` 테이블에서 **시간대(HOUR)별 입양 건수**를 조회하세요.\n\n결과는 시간대 순으로 정렬하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT HOUR(DATETIME) AS HOUR, COUNT(*) AS COUNT FROM ANIMAL_OUTS GROUP BY HOUR(DATETIME) ORDER BY HOUR",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "JOIN",
+      "description": "INNER JOIN, LEFT JOIN, 다중 테이블",
+      "order": 6,
+      "exercises": [
+        {
+          "title": "입양된 동물 정보",
+          "description": "`ANIMAL_INS`와 `ANIMAL_OUTS`를 조인하여, **입양된 동물**의 아이디, 이름, 보호 시작일, 입양일을 조회하세요.\n\n보호 시작일 순으로 정렬하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT I.ANIMAL_ID, I.NAME, I.DATETIME, O.DATETIME FROM ANIMAL_INS I INNER JOIN ANIMAL_OUTS O ON I.ANIMAL_ID = O.ANIMAL_ID ORDER BY I.DATETIME",
+          "difficulty": 2
+        },
+        {
+          "title": "입양 못 간 동물",
+          "description": "보호소에 들어왔지만 **아직 입양되지 못한** 동물의 아이디와 이름을 조회하세요.\n\n아이디 순으로 정렬하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT I.ANIMAL_ID, I.NAME FROM ANIMAL_INS I LEFT JOIN ANIMAL_OUTS O ON I.ANIMAL_ID = O.ANIMAL_ID WHERE O.ANIMAL_ID IS NULL ORDER BY I.ANIMAL_ID",
+          "difficulty": 2
+        },
+        {
+          "title": "보호 기간이 긴 동물",
+          "description": "보호소에 **가장 오래 있었던 동물** 3마리의 이름과 보호 시작일을 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT I.NAME, I.DATETIME FROM ANIMAL_INS I JOIN ANIMAL_OUTS O ON I.ANIMAL_ID = O.ANIMAL_ID ORDER BY DATEDIFF(O.DATETIME, I.DATETIME) DESC LIMIT 3",
+          "difficulty": 3
+        },
+        {
+          "title": "식품 주문과 창고",
+          "description": "`FOOD_ORDER`, `FOOD_PRODUCT`, `FOOD_WAREHOUSE` 3개 테이블을 조인하여,\n\n**냉동 창고(FREEZER_YN = 'Y')**에 있는 주문의 **상품명, 창고명, 수량**을 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT P.PRODUCT_NAME, W.WAREHOUSE_NAME, O.AMOUNT FROM FOOD_ORDER O JOIN FOOD_PRODUCT P ON O.PRODUCT_ID = P.PRODUCT_ID JOIN FOOD_WAREHOUSE W ON O.WAREHOUSE_ID = W.WAREHOUSE_ID WHERE W.FREEZER_YN = 'Y'",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "name": "서브쿼리",
+      "description": "서브쿼리, IN, EXISTS",
+      "order": 7,
+      "exercises": [
+        {
+          "title": "평균보다 비싼 식품",
+          "description": "`FOOD_PRODUCT` 테이블에서 **전체 평균 가격보다 비싼** 식품의 이름과 가격을 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT PRODUCT_NAME, PRICE FROM FOOD_PRODUCT WHERE PRICE > (SELECT AVG(PRICE) FROM FOOD_PRODUCT)",
+          "difficulty": 2
+        },
+        {
+          "title": "리뷰 최다 식당",
+          "description": "`REST_REVIEW` 테이블에서 **리뷰가 가장 많은 식당**의 정보를 `REST_INFO`에서 조회하세요.",
+          "initial_code": "SELECT",
+          "check_type": "query_match",
+          "check_value": "SELECT R.* FROM REST_INFO R WHERE R.REST_ID = (SELECT REST_ID FROM REST_REVIEW GROUP BY REST_ID ORDER BY COUNT(*) DESC LIMIT 1)",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}
