@@ -1,15 +1,27 @@
 import { useEffect, useState } from "react";
-import { Plus, FileText, Search } from "lucide-react";
+import { Plus, FileText, Search, Trash2 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
 
 export default function KnowledgeList() {
-  const { domains, knowledgeCards, selectedCardId, currentDomain, loadKnowledge, selectCard, createCard, selectDomain } = useStore();
+  const {
+    domains, currentDomain, notebooks, currentNotebookId,
+    knowledgeCards, selectedCardId,
+    selectDomain, selectNotebook, createNotebook, deleteNotebook,
+    selectCard, createCard,
+  } = useStore();
   const [search, setSearch] = useState("");
+  const [showNewNb, setShowNewNb] = useState(false);
+  const [newNbName, setNewNbName] = useState("");
 
-  useEffect(() => {
-    loadKnowledge();
-  }, [currentDomain?.id]);
+  const handleCreateNb = async () => {
+    if (!newNbName.trim()) return;
+    await createNotebook(newNbName.trim());
+    setNewNbName("");
+    setShowNewNb(false);
+  };
+
+  const currentNb = notebooks.find((n) => n.id === currentNotebookId);
 
   const filtered = search
     ? knowledgeCards.filter(
@@ -21,8 +33,8 @@ export default function KnowledgeList() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Domain selector */}
-      <div className="border-b dark:border-gray-700 p-3">
+      {/* Domain + Notebook selectors */}
+      <div className="border-b dark:border-gray-700 p-3 space-y-2">
         <select
           value={currentDomain?.id ?? ""}
           onChange={(e) => selectDomain(Number(e.target.value))}
@@ -32,6 +44,42 @@ export default function KnowledgeList() {
             <option key={d.id} value={d.id}>{d.name}</option>
           ))}
         </select>
+
+        {notebooks.length > 0 && (
+          <div className="flex items-center gap-1">
+            <select
+              value={currentNotebookId ?? ""}
+              onChange={(e) => selectNotebook(Number(e.target.value))}
+              className="flex-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-100 px-2 py-1.5 text-xs focus:border-primary-500 focus:outline-none"
+            >
+              {notebooks.map((n) => (
+                <option key={n.id} value={n.id}>{n.name}</option>
+              ))}
+            </select>
+            <button onClick={() => setShowNewNb(!showNewNb)} className="rounded p-1 text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-700" title="새 노트북">
+              <Plus size={14} />
+            </button>
+            {currentNb && !currentNb.is_default && (
+              <button onClick={() => { if (confirm(`"${currentNb.name}" 삭제?`)) deleteNotebook(currentNb.id); }} className="rounded p-1 text-gray-400 hover:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700" title="삭제">
+                <Trash2 size={14} />
+              </button>
+            )}
+          </div>
+        )}
+
+        {showNewNb && (
+          <div className="flex items-center gap-1">
+            <input
+              value={newNbName}
+              onChange={(e) => setNewNbName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreateNb()}
+              placeholder="노트북 이름"
+              className="flex-1 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-100 px-2 py-1 text-xs focus:border-primary-500 focus:outline-none"
+              autoFocus
+            />
+            <button onClick={handleCreateNb} className="btn-primary text-xs px-2 py-1">만들기</button>
+          </div>
+        )}
       </div>
 
       {/* Search */}
@@ -74,24 +122,14 @@ export default function KnowledgeList() {
           >
             <div className="flex w-full items-center gap-1.5">
               <FileText size={13} className="text-gray-400 shrink-0" />
-              <span
-                className={cn(
-                  "text-sm font-medium truncate",
-                  selectedCardId === card.id
-                    ? "text-primary-700 dark:text-primary-300"
-                    : "text-gray-700 dark:text-gray-200",
-                )}
-              >
+              <span className={cn("text-sm font-medium truncate", selectedCardId === card.id ? "text-primary-700 dark:text-primary-300" : "text-gray-700 dark:text-gray-200")}>
                 {card.title}
               </span>
             </div>
             {card.tags && (
               <div className="mt-0.5 ml-5 flex gap-1 flex-wrap">
                 {card.tags.split(",").map((tag, i) => (
-                  <span
-                    key={i}
-                    className="text-[10px] rounded bg-gray-100 dark:bg-gray-600 px-1.5 py-0.5 text-gray-500 dark:text-gray-300"
-                  >
+                  <span key={i} className="text-[10px] rounded bg-gray-100 dark:bg-gray-600 px-1.5 py-0.5 text-gray-500 dark:text-gray-300">
                     {tag.trim()}
                   </span>
                 ))}

@@ -7,7 +7,7 @@ import type {
   AttemptResult,
 } from "../types";
 import * as api from "../api/client";
-import type { Curriculum, KnowledgeCard } from "../api/client";
+import type { Curriculum, Notebook, KnowledgeCard } from "../api/client";
 
 export type AppMode = "practice" | "explore";
 
@@ -31,7 +31,9 @@ interface DojangState {
   lastResult: ExecuteResult | null;
   lastAttempt: AttemptResult | null;
 
-  // Knowledge
+  // Knowledge (notebooks + cards)
+  notebooks: Notebook[];
+  currentNotebookId: number | null;
   knowledgeCards: KnowledgeCard[];
   selectedCardId: number | null;
   currentCard: KnowledgeCard | null;
@@ -55,6 +57,10 @@ interface DojangState {
   runCode: () => Promise<void>;
   runCodeRaw: (code: string) => Promise<ExecuteResult>;
   submitAttempt: () => Promise<void>;
+  loadNotebooks: () => Promise<void>;
+  selectNotebook: (notebookId: number) => Promise<void>;
+  createNotebook: (name: string) => Promise<void>;
+  deleteNotebook: (notebookId: number) => Promise<void>;
   loadKnowledge: () => Promise<void>;
   selectCard: (id: number) => Promise<void>;
   createCard: (title: string) => Promise<void>;
@@ -78,6 +84,8 @@ export const useStore = create<DojangState>((set, get) => ({
   isExecuting: false,
   lastResult: null,
   lastAttempt: null,
+  notebooks: [],
+  currentNotebookId: null,
   knowledgeCards: [],
   selectedCardId: null,
   currentCard: null,
@@ -111,7 +119,7 @@ export const useStore = create<DojangState>((set, get) => ({
     });
     if (domain) {
       await get().loadCurricula();
-      await get().loadKnowledge();
+      await get().loadNotebooks();
     }
   },
 
@@ -221,10 +229,43 @@ export const useStore = create<DojangState>((set, get) => ({
     }
   },
 
-  loadKnowledge: async () => {
+  loadNotebooks: async () => {
     const { currentDomain } = get();
+    if (!currentDomain) return;
     try {
-      const cards = await api.listKnowledge(currentDomain?.id);
+      const notebooks = await api.listNotebooks(currentDomain.id);
+      set({ notebooks });
+      if (notebooks.length > 0 && !get().currentNotebookId) {
+        const def = notebooks.find((n) => n.is_default) || notebooks[0];
+        await get().selectNotebook(def.id);
+      }
+    } catch { set({ notebooks: [], knowledgeCards: [] }); }
+  },
+
+  selectNotebook: async (notebookId: number) => {
+    set({ currentNotebookId: notebookId, selectedCardId: null, currentCard: null });
+    await get().loadKnowledge();
+  },
+
+  createNotebook: async (name: string) => {
+    const { currentDomain } = get();
+    if (!currentDomain) return;
+    const { id } = await api.createNotebook(currentDomain.id, name);
+    await get().loadNotebooks();
+    await get().selectNotebook(id);
+  },
+
+  deleteNotebook: async (notebookId: number) => {
+    await api.deleteNotebook(notebookId);
+    set({ currentNotebookId: null });
+    await get().loadNotebooks();
+  },
+
+  loadKnowledge: async () => {
+    const { currentNotebookId } = get();
+    if (!currentNotebookId) { set({ knowledgeCards: [] }); return; }
+    try {
+      const cards = await api.listCardsInNotebook(currentNotebookId);
       set({ knowledgeCards: cards });
     } catch { set({ knowledgeCards: [] }); }
   },
@@ -237,9 +278,9 @@ export const useStore = create<DojangState>((set, get) => ({
   },
 
   createCard: async (title) => {
-    const { currentDomain } = get();
+    const { currentDomain, currentNotebookId } = get();
     try {
-      const { id } = await api.createKnowledge({ domain_id: currentDomain?.id, title, content: "" });
+      const { id } = await api.createKnowledge({ notebook_id: currentNotebookId, domain_id: currentDomain?.id, title, content: "" });
       await get().loadKnowledge();
       await get().selectCard(id);
       set({ isEditingCard: true });

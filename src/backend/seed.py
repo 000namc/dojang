@@ -57,6 +57,22 @@ async def seed_if_empty(db_path: str) -> None:
             for topic_data in curriculum.get("topics", []):
                 await _insert_topic(db, curriculum_id, topic_data, parent_id=None)
 
+            # Seed knowledge notebooks
+            knowledge_path = DOMAINS_DIR / domain_dir_name / "knowledge.json"
+            if knowledge_path.exists():
+                knowledge = json.loads(knowledge_path.read_text())
+                for nb in knowledge.get("notebooks", []):
+                    cursor = await db.execute(
+                        "INSERT INTO notebooks (domain_id, name, description, is_default) VALUES (?, ?, ?, 1)",
+                        (domain_id, nb["name"], nb.get("description", "")),
+                    )
+                    notebook_id = cursor.lastrowid
+                    for card in nb.get("cards", []):
+                        await db.execute(
+                            "INSERT INTO knowledge (notebook_id, domain_id, title, content, tags) VALUES (?, ?, ?, ?, ?)",
+                            (notebook_id, domain_id, card["title"], card.get("content", ""), card.get("tags", "")),
+                        )
+
             await db.commit()
     finally:
         await db.close()

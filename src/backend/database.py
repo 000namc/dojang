@@ -58,8 +58,18 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS notebooks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    domain_id INTEGER REFERENCES domains(id),
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    is_default INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS knowledge (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    notebook_id INTEGER REFERENCES notebooks(id),
     domain_id INTEGER REFERENCES domains(id),
     title TEXT NOT NULL,
     content TEXT NOT NULL DEFAULT '',

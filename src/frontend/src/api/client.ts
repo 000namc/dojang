@@ -75,16 +75,46 @@ export async function checkNotify(since: number): Promise<{ event: string | null
   return data;
 }
 
+// Notebooks
+export interface Notebook {
+  id: number;
+  domain_id: number;
+  name: string;
+  description: string;
+  is_default: number;
+}
+
+export async function listNotebooks(domainId: number): Promise<Notebook[]> {
+  const { data } = await api.get(`/api/domains/${domainId}/notebooks`);
+  return data;
+}
+
+export async function createNotebook(domainId: number, name: string): Promise<{ id: number }> {
+  const { data } = await api.post(`/api/domains/${domainId}/notebooks`, { name });
+  return data;
+}
+
+export async function deleteNotebook(notebookId: number): Promise<void> {
+  await api.delete(`/api/notebooks/${notebookId}`);
+}
+
 // Knowledge
 export interface KnowledgeCard {
   id: number;
+  notebook_id: number | null;
   domain_id: number | null;
   domain_name: string | null;
+  notebook_name: string | null;
   title: string;
   content: string;
   tags: string;
   created_at: string;
   updated_at: string;
+}
+
+export async function listCardsInNotebook(notebookId: number, q?: string): Promise<KnowledgeCard[]> {
+  const { data } = await api.get(`/api/notebooks/${notebookId}/cards`, { params: { q } });
+  return data;
 }
 
 export async function listKnowledge(domainId?: number, q?: string): Promise<KnowledgeCard[]> {
@@ -97,7 +127,7 @@ export async function getKnowledge(id: number): Promise<KnowledgeCard> {
   return data;
 }
 
-export async function createKnowledge(card: { domain_id?: number; title: string; content?: string; tags?: string }): Promise<{ id: number }> {
+export async function createKnowledge(card: { notebook_id?: number | null; domain_id?: number; title: string; content?: string; tags?: string }): Promise<{ id: number }> {
   const { data } = await api.post("/api/knowledge", card);
   return data;
 }
