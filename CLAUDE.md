@@ -13,9 +13,13 @@
 ## 실행
 
 ```bash
-cd build && docker compose up -d && cd ..
+# 프로덕션 (한 줄)
+docker compose up -d    # http://localhost:8010
+
+# 개발 (hot-reload)
+cd build && docker compose up -d && cd ..     # 도메인 컨테이너만
 uv run uvicorn src.backend.main:app --port 8010 --reload
-cd src/frontend && npm run dev
+cd src/frontend && npm run dev                # http://localhost:5174
 ```
 
 ## 문서 인덱스

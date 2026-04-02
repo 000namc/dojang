@@ -22,21 +22,19 @@ Practice anything in real sandboxed environments, guided by Claude Code.
 ## Quick Start
 
 ```bash
-# 1. Clone
-git clone <repo-url> dojang && cd dojang
-
-# 2. Domain containers
-cd build && docker compose up -d && cd ..
-
-# 3. Backend
-uv sync
-uv run uvicorn src.backend.main:app --port 8010 --reload
-
-# 4. Frontend (another terminal)
-cd src/frontend && npm install && npm run dev
+git clone https://github.com/000namc/dojang.git && cd dojang
+docker compose up -d
 ```
 
-Open **http://localhost:5174**
+Open **http://localhost:8010**
+
+### Development (hot-reload)
+
+```bash
+cd build && docker compose up -d && cd ..     # domain containers only
+uv sync && uv run uvicorn src.backend.main:app --port 8010 --reload
+cd src/frontend && npm install && npm run dev  # http://localhost:5174
+```
 
 ## Built-in Domains
 

@@ -8,6 +8,5 @@ frontend/dist/
 static/
 .DS_Store
 *.egg-info/
-uv.lock
 .claude/
 package-lock.json
