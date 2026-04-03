@@ -47,6 +47,8 @@ export interface CurriculumTree {
   topics: Topic[];
 }
 
+export type UiType = "auto" | "terminal" | "code" | "text";
+
 export interface Exercise {
   id: number;
   topic_id: number;
@@ -56,6 +58,8 @@ export interface Exercise {
   check_type: string;
   check_value: string | null;
   difficulty: number;
+  ui_type: UiType;
+  domain_name: string;
   created_by: string;
 }
 

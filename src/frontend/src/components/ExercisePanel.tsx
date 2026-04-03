@@ -1,21 +1,30 @@
-import { Send } from "lucide-react";
+import { useState } from "react";
+import { Send, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useStore } from "../stores/store";
+import type { UiType } from "../types";
 import TerminalWidget from "./TerminalWidget";
 import CodeEditor from "./CodeEditor";
 import ResultPanel from "./ResultPanel";
-import { Play } from "lucide-react";
+
+function resolveUiType(uiType: UiType, domainName: string): "terminal" | "code" | "text" {
+  if (uiType !== "auto") return uiType;
+  if (domainName === "SQL") return "code";
+  return "terminal";
+}
 
 export default function ExercisePanel() {
   const {
     currentExercise,
     currentDomain,
-    curriculumTree,
     isExecuting,
     lastAttempt,
+    editorCode,
+    setEditorCode,
     runCode,
     submitAttempt,
   } = useStore();
+  const [textAnswer, setTextAnswer] = useState("");
 
   if (!currentExercise) {
     return (
@@ -28,7 +37,8 @@ export default function ExercisePanel() {
     );
   }
 
-  const isTerminalDomain = currentDomain?.name !== "SQL";
+  const domainName = currentExercise.domain_name || currentDomain?.name || "";
+  const resolved = resolveUiType(currentExercise.ui_type || "auto", domainName);
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-white dark:bg-gray-900">
@@ -63,12 +73,13 @@ export default function ExercisePanel() {
           </div>
         )}
 
-        {/* Terminal widget (for CLI/Git/Docker) or Code editor (for SQL) */}
-        {isTerminalDomain ? (
+        {/* UI by type */}
+        {resolved === "terminal" && (
           <TerminalWidget className="h-80" />
-        ) : (
+        )}
+
+        {resolved === "code" && (
           <div className="space-y-3">
-            {/* SQL: Monaco editor + result */}
             <div className="rounded-xl overflow-hidden border border-gray-700 h-48">
               <CodeEditor className="h-full" />
             </div>
@@ -76,9 +87,21 @@ export default function ExercisePanel() {
           </div>
         )}
 
+        {resolved === "text" && (
+          <textarea
+            value={textAnswer}
+            onChange={(e) => {
+              setTextAnswer(e.target.value);
+              setEditorCode(e.target.value);
+            }}
+            placeholder="답변을 작성하세요..."
+            className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm leading-relaxed text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:border-primary-500 focus:outline-none resize-none h-48"
+          />
+        )}
+
         {/* Submit bar */}
         <div className="flex items-center gap-3">
-          {!isTerminalDomain && (
+          {resolved === "code" && (
             <button onClick={runCode} disabled={isExecuting} className="btn-secondary">
               <Play size={14} />
               실행
@@ -89,7 +112,9 @@ export default function ExercisePanel() {
             제출
           </button>
           <span className="ml-auto text-xs text-gray-400">
-            {isTerminalDomain ? "터미널에서 명령어를 실행해보세요" : "Ctrl+Enter 실행"}
+            {resolved === "terminal" && "터미널에서 명령어를 실행해보세요"}
+            {resolved === "code" && "Ctrl+Enter 실행"}
+            {resolved === "text" && "답변을 작성하고 제출하세요"}
           </span>
         </div>
       </div>

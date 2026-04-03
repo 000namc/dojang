@@ -32,8 +32,11 @@ async def get_db(settings: Settings = Depends(get_settings)):
 @router.get("/exercises/{exercise_id}")
 async def get_exercise(exercise_id: int, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "SELECT id, topic_id, title, description, initial_code, check_type, check_value, difficulty, created_by "
-        "FROM exercises WHERE id = ?",
+        "SELECT e.id, e.topic_id, e.title, e.description, e.initial_code, e.check_type, e.check_value, e.difficulty, e.ui_type, e.created_by, "
+        "d.name as domain_name "
+        "FROM exercises e JOIN topics t ON e.topic_id = t.id "
+        "JOIN curricula c ON t.curriculum_id = c.id "
+        "JOIN domains d ON c.domain_id = d.id WHERE e.id = ?",
         (exercise_id,),
     )
     row = await cursor.fetchone()
@@ -47,9 +50,9 @@ async def create_exercise(
     req: CreateExerciseRequest, db: aiosqlite.Connection = Depends(get_db)
 ):
     cursor = await db.execute(
-        "INSERT INTO exercises (topic_id, title, description, initial_code, check_type, check_value, difficulty, created_by) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, 'ai')",
-        (req.topic_id, req.title, req.description, req.initial_code, req.check_type, req.check_value, req.difficulty),
+        "INSERT INTO exercises (topic_id, title, description, initial_code, check_type, check_value, difficulty, ui_type, created_by) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ai')",
+        (req.topic_id, req.title, req.description, req.initial_code, req.check_type, req.check_value, req.difficulty, req.ui_type),
     )
     await db.commit()
     return {"id": cursor.lastrowid, "title": req.title}

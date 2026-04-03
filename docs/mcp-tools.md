@@ -29,6 +29,7 @@ Claude Code가 사용하는 MCP 도구 목록. `src/mcp_server/server.py`에 정
 - `initial_code` (string): 에디터 초기 코드
 - `check_value` (string): 정답 검증 값
 - `difficulty` (integer): 1-5
+- `ui_type` (string): `auto | terminal | code | text` — auto는 도메인에 따라 자동 결정 (SQL→code, CLI/Git/Docker→terminal)
 
 ## 실행
 

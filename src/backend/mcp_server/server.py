@@ -59,6 +59,12 @@ async def list_tools() -> list[Tool]:
                     },
                     "check_value": {"type": "string", "description": "정답 확인용 쿼리/스크립트/예상출력", "default": ""},
                     "difficulty": {"type": "integer", "description": "난이도 1-5", "default": 1},
+                    "ui_type": {
+                        "type": "string",
+                        "enum": ["auto", "terminal", "code", "text"],
+                        "description": "UI 타입: auto(도메인에 따라 자동), terminal(CLI 명령어), code(코드 에디터), text(텍스트 입력). 기본값 auto.",
+                        "default": "auto",
+                    },
                 },
                 "required": ["topic_id", "title", "description", "check_type"],
             },
@@ -258,8 +264,8 @@ def _create_exercise(args: dict) -> dict:
     db = get_db()
     try:
         cursor = db.execute(
-            "INSERT INTO exercises (topic_id, title, description, initial_code, check_type, check_value, difficulty, created_by) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, 'ai')",
+            "INSERT INTO exercises (topic_id, title, description, initial_code, check_type, check_value, difficulty, ui_type, created_by) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ai')",
             (
                 args["topic_id"],
                 args["title"],
@@ -268,6 +274,7 @@ def _create_exercise(args: dict) -> dict:
                 args["check_type"],
                 args.get("check_value", ""),
                 args.get("difficulty", 1),
+                args.get("ui_type", "auto"),
             ),
         )
         db.commit()

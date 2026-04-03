@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS exercises (
     check_type TEXT NOT NULL DEFAULT 'ai_check',
     check_value TEXT DEFAULT '',
     difficulty INTEGER DEFAULT 1,
+    ui_type TEXT NOT NULL DEFAULT 'auto',
     created_by TEXT DEFAULT 'system',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -98,6 +99,7 @@ async def init_db(db_path: str) -> None:
         for col, sql in [
             ("topic_id", "ALTER TABLE knowledge ADD COLUMN topic_id INTEGER REFERENCES topics(id)"),
             ("order_num", "ALTER TABLE knowledge ADD COLUMN order_num INTEGER NOT NULL DEFAULT 0"),
+            ("ui_type", "ALTER TABLE exercises ADD COLUMN ui_type TEXT NOT NULL DEFAULT 'auto'"),
         ]:
             try:
                 await db.execute(sql)

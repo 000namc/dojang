@@ -55,6 +55,7 @@ class CreateExerciseRequest(BaseModel):
     check_type: str = "ai_check"
     check_value: str = ""
     difficulty: int = 1
+    ui_type: str = "auto"
 
 
 # --- Attempt ---
