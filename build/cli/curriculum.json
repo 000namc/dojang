@@ -4,6 +4,26 @@
       "name": "첫 걸음: 여기가 어디지?",
       "description": "pwd, ls, cd — 터미널 기본 탐색",
       "order": 1,
+      "knowledge": [
+        {
+          "title": "터미널이란?",
+          "content": "터미널(Terminal)은 컴퓨터와 텍스트로 대화하는 도구입니다.\n\n- GUI(그래픽)와 달리 **명령어를 직접 입력**해서 컴퓨터를 제어합니다\n- 셸(Shell)이 명령어를 해석해서 실행합니다\n- macOS는 `zsh`, 리눅스는 `bash`가 기본 셸입니다\n- 프롬프트(`$`)가 보이면 명령어를 입력할 준비가 된 것입니다",
+          "tags": "개념,기초",
+          "order": 0
+        },
+        {
+          "title": "파일 시스템 구조",
+          "content": "리눅스/맥의 파일 시스템은 **트리 구조**입니다.\n\n```\n/                  ← 루트 (최상위)\n├── home/          ← 사용자 홈 디렉토리들\n│   └── user/      ← 내 홈 (~)\n├── etc/           ← 설정 파일\n├── var/           ← 로그, 데이터\n├── tmp/           ← 임시 파일\n└── usr/           ← 프로그램\n```\n\n- `/`는 루트 디렉토리 (모든 것의 시작)\n- `~`는 내 홈 디렉토리의 약자\n- `.`은 현재 디렉토리, `..`은 상위 디렉토리",
+          "tags": "개념,파일시스템",
+          "order": 1
+        },
+        {
+          "title": "경로: 절대경로 vs 상대경로",
+          "content": "**절대경로**: `/`부터 시작하는 전체 경로\n- `/home/user/project/src/main.py`\n\n**상대경로**: 현재 위치 기준\n- `./src/main.py` (현재 디렉토리의 src 안)\n- `../docs/` (상위 디렉토리의 docs)\n- `~/notes.txt` (홈 디렉토리의 notes.txt)\n\n현재 위치가 `/home/user/project`일 때:\n- `./src` = `/home/user/project/src`\n- `../` = `/home/user/`",
+          "tags": "개념,경로",
+          "order": 2
+        }
+      ],
       "exercises": [
         {
           "title": "현재 위치 확인",
@@ -135,6 +155,14 @@
       "name": "복사와 이동",
       "description": "cp, mv — 파일 복사, 이동, 이름 변경",
       "order": 4,
+      "knowledge": [
+        {
+          "title": "파일 권한 읽기",
+          "content": "`ls -l` 출력에서 권한 읽는 법:\n\n```\n-rw-r--r--  1 user group  1234 Jan 15 09:00 file.txt\n│├──┤├──┤├──┤\n│ u    g    o\n│ ser  roup ther\n```\n\n- `r` = 읽기 (read)\n- `w` = 쓰기 (write)\n- `x` = 실행 (execute)\n- `-` = 권한 없음\n\n첫 글자: `-`(파일), `d`(디렉토리), `l`(심볼릭 링크)",
+          "tags": "개념,권한",
+          "order": 0
+        }
+      ],
       "exercises": [
         {
           "title": "파일 복사하기",
@@ -166,6 +194,14 @@
       "name": "파일 찾기",
       "description": "find, ls — 파일 검색과 구조 파악",
       "order": 5,
+      "knowledge": [
+        {
+          "title": "와일드카드",
+          "content": "파일 이름을 패턴으로 매칭:\n\n- `*` — 뭐든지 (0개 이상)\n- `?` — 정확히 1글자\n- `[abc]` — a, b, c 중 하나\n- `[0-9]` — 숫자 하나\n\n```bash\nls *.txt        # .txt로 끝나는 모든 파일\nls data?.csv    # data1.csv, dataA.csv 등\nls [Rr]eadme*   # Readme 또는 readme로 시작\n```",
+          "tags": "개념,와일드카드",
+          "order": 0
+        }
+      ],
       "exercises": [
         {
           "title": "하위 폴더까지 목록 보기",
@@ -229,6 +265,14 @@
       "name": "파이프와 리다이렉션",
       "description": "pipe(|), >, >> — 명령어 조합의 힘",
       "order": 7,
+      "knowledge": [
+        {
+          "title": "파이프와 리다이렉션",
+          "content": "**파이프 (`|`)**: 앞 명령의 출력을 뒷 명령의 입력으로 전달\n\n```bash\ncat file.txt | grep \"error\" | wc -l\n# file.txt → error 포함 줄 필터 → 줄 수 세기\n```\n\n**리다이렉션**:\n- `>` 파일에 쓰기 (덮어쓰기)\n- `>>` 파일에 추가\n- `<` 파일에서 읽기\n\n```bash\necho \"hello\" > out.txt    # out.txt에 저장\necho \"world\" >> out.txt   # out.txt에 추가\nsort < data.txt           # data.txt를 입력으로\n```",
+          "tags": "개념,파이프",
+          "order": 0
+        }
+      ],
       "exercises": [
         {
           "title": "파이프 기초",

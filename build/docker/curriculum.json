@@ -4,6 +4,20 @@
       "name": "Docker 기초",
       "description": "이미지, 컨테이너, 레지스트리 개념",
       "order": 1,
+      "knowledge": [
+        {
+          "title": "컨테이너란?",
+          "content": "컨테이너는 애플리케이션과 실행 환경을 **하나로 패키징**한 것입니다.\n\n- 가상머신(VM)과 달리 OS 커널을 공유 → **가볍고 빠름**\n- \"내 컴퓨터에서는 되는데?\" 문제를 해결\n- 어디서든 동일한 환경으로 실행\n\n```\n가상머신:  [App + OS + 커널]  ← 무겁다\n컨테이너:  [App + 라이브러리]  ← 가볍다\n             호스트 OS 커널 공유\n```",
+          "tags": "개념,기초",
+          "order": 0
+        },
+        {
+          "title": "이미지 vs 컨테이너",
+          "content": "**이미지(Image)**: 설계도 (읽기 전용)\n- Dockerfile로 만든 스냅샷\n- 레이어로 구성 (캐싱 가능)\n- `docker images`로 확인\n\n**컨테이너(Container)**: 실행 중인 인스턴스\n- 이미지를 실행하면 컨테이너가 됨\n- 쓰기 가능한 레이어가 추가됨\n- `docker ps`로 확인\n\n```\nImage (설계도) → docker run → Container (실체)\n                              docker stop → 중지\n                              docker rm → 삭제\n```",
+          "tags": "개념,핵심",
+          "order": 1
+        }
+      ],
       "exercises": [
         {
           "title": "Docker 버전 확인",
@@ -74,6 +88,20 @@
       "name": "Dockerfile 이해",
       "description": "FROM, RUN, COPY, CMD, EXPOSE",
       "order": 4,
+      "knowledge": [
+        {
+          "title": "Dockerfile 기본 명령어",
+          "content": "Dockerfile은 이미지를 만드는 **레시피**입니다.\n\n```dockerfile\nFROM node:20-alpine    # 베이스 이미지\nWORKDIR /app           # 작업 디렉토리 설정\nCOPY package.json .    # 파일 복사\nRUN npm install        # 명령어 실행 (빌드 시)\nCOPY . .               # 나머지 파일 복사\nEXPOSE 3000            # 포트 문서화\nCMD [\"npm\", \"start\"]   # 컨테이너 시작 시 실행\n```\n\n- `FROM`: 항상 첫 줄. 베이스 이미지 지정\n- `RUN`: 빌드 시 실행 (레이어 생성)\n- `CMD`: 컨테이너 시작 시 실행 (1개만)\n- `COPY` vs `ADD`: COPY가 단순하고 권장됨",
+          "tags": "개념,Dockerfile",
+          "order": 0
+        },
+        {
+          "title": "레이어와 캐싱",
+          "content": "Docker 이미지는 **레이어의 스택**입니다.\n\n```\n[CMD npm start]        ← 레이어 4\n[COPY . .]             ← 레이어 3\n[RUN npm install]      ← 레이어 2\n[COPY package.json .]  ← 레이어 1\n[FROM node:20-alpine]  ← 베이스 레이어\n```\n\n- 각 명령어 = 하나의 레이어\n- 변경되지 않은 레이어는 **캐시** 재사용\n- 그래서 `package.json`을 먼저 복사하고 `npm install` → 코드만 바뀌면 install 캐시 유지\n- 자주 바뀌는 것은 아래쪽에 배치",
+          "tags": "개념,최적화",
+          "order": 1
+        }
+      ],
       "exercises": [
         {
           "title": "Dockerfile 읽기",
@@ -95,6 +123,14 @@
       "name": "볼륨과 네트워크",
       "description": "volume, network, port mapping",
       "order": 5,
+      "knowledge": [
+        {
+          "title": "볼륨과 네트워크",
+          "content": "**볼륨(Volume)**: 컨테이너 외부에 데이터를 저장\n\n```bash\ndocker run -v mydata:/app/data  # 이름 있는 볼륨\ndocker run -v ./local:/app      # 바인드 마운트\n```\n\n- 컨테이너를 삭제해도 볼륨의 데이터는 유지\n- 바인드 마운트: 호스트 폴더를 직접 연결\n\n**네트워크**: 컨테이너 간 통신\n\n```bash\ndocker network create mynet\ndocker run --network mynet --name db postgres\ndocker run --network mynet app  # 'db'로 접근 가능\n```",
+          "tags": "개념,데이터",
+          "order": 0
+        }
+      ],
       "exercises": [
         {
           "title": "볼륨 목록",
@@ -116,6 +152,14 @@
       "name": "Docker Compose",
       "description": "compose up/down, 서비스 관리",
       "order": 6,
+      "knowledge": [
+        {
+          "title": "Docker Compose란?",
+          "content": "여러 컨테이너를 **한 번에** 정의하고 실행하는 도구입니다.\n\n```yaml\nservices:\n  web:\n    build: .          # Dockerfile로 빌드\n    ports:\n      - \"3000:3000\"   # 포트 매핑\n    depends_on:\n      - db            # db가 먼저 시작\n  db:\n    image: postgres   # 기존 이미지 사용\n    volumes:\n      - pgdata:/var/lib/postgresql/data\n\nvolumes:\n  pgdata:             # 이름 있는 볼륨\n```\n\n- `docker compose up -d` — 전체 시작\n- `docker compose down` — 전체 종료\n- `docker compose logs` — 로그 확인",
+          "tags": "개념,compose",
+          "order": 0
+        }
+      ],
       "exercises": [
         {
           "title": "Compose 파일 읽기",

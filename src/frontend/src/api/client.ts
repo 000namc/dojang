@@ -44,6 +44,36 @@ export async function getCurriculumTree(curriculumId: number): Promise<Curriculu
   return data;
 }
 
+export async function deleteTopic(topicId: number): Promise<void> {
+  await api.delete(`/api/topics/${topicId}`);
+}
+
+// Checkpoints
+export interface Checkpoint {
+  id: number;
+  curriculum_id: number;
+  name: string;
+  created_at: string;
+}
+
+export async function listCheckpoints(curriculumId: number): Promise<Checkpoint[]> {
+  const { data } = await api.get(`/api/curricula/${curriculumId}/checkpoints`);
+  return data;
+}
+
+export async function createCheckpoint(curriculumId: number, name?: string): Promise<{ id: number; name: string }> {
+  const { data } = await api.post(`/api/curricula/${curriculumId}/checkpoints`, { name: name || "" });
+  return data;
+}
+
+export async function restoreCheckpoint(checkpointId: number): Promise<void> {
+  await api.post(`/api/checkpoints/${checkpointId}/restore`);
+}
+
+export async function deleteCheckpoint(checkpointId: number): Promise<void> {
+  await api.delete(`/api/checkpoints/${checkpointId}`);
+}
+
 export async function getExercise(exerciseId: number): Promise<Exercise> {
   const { data } = await api.get(`/api/exercises/${exerciseId}`);
   return data;
@@ -103,6 +133,7 @@ export interface KnowledgeCard {
   id: number;
   notebook_id: number | null;
   domain_id: number | null;
+  topic_id: number | null;
   domain_name: string | null;
   notebook_name: string | null;
   title: string;
@@ -127,7 +158,7 @@ export async function getKnowledge(id: number): Promise<KnowledgeCard> {
   return data;
 }
 
-export async function createKnowledge(card: { notebook_id?: number | null; domain_id?: number; title: string; content?: string; tags?: string }): Promise<{ id: number }> {
+export async function createKnowledge(card: { notebook_id?: number | null; domain_id?: number; topic_id?: number | null; title: string; content?: string; tags?: string }): Promise<{ id: number }> {
   const { data } = await api.post("/api/knowledge", card);
   return data;
 }

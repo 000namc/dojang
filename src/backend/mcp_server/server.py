@@ -132,6 +132,7 @@ async def list_tools() -> list[Tool]:
                 "type": "object",
                 "properties": {
                     "domain": {"type": "string", "description": "관련 도메인 이름 (CLI, Git, Docker, SQL 등). 범용 지식이면 생략."},
+                    "topic_id": {"type": "integer", "description": "토픽 ID (커리큘럼 토픽에 연결할 때)"},
                     "title": {"type": "string", "description": "지식 카드 제목"},
                     "content": {"type": "string", "description": "핵심 내용 (마크다운)"},
                     "tags": {"type": "string", "description": "태그들 (쉼표 구분). 예: 'JOIN,SQL,기초'"},
@@ -192,15 +193,31 @@ def _get_curriculum(domain_name: str) -> dict:
         if not domain:
             return {"error": f"Domain '{domain_name}' not found"}
 
+        # Get default curriculum
+        cur = db.execute(
+            "SELECT id FROM curricula WHERE domain_id = ? AND is_default = 1", (domain["id"],)
+        ).fetchone()
+        if not cur:
+            cur = db.execute(
+                "SELECT id FROM curricula WHERE domain_id = ? ORDER BY id LIMIT 1", (domain["id"],)
+            ).fetchone()
+        if not cur:
+            return {"domain": domain_name, "topics": []}
+
         topics = db.execute(
-            "SELECT * FROM topics WHERE domain_id = ? ORDER BY order_num",
-            (domain["id"],),
+            "SELECT * FROM topics WHERE curriculum_id = ? ORDER BY order_num",
+            (cur["id"],),
         ).fetchall()
 
         result_topics = []
         for t in topics:
             exercises = db.execute(
                 "SELECT id, title, difficulty FROM exercises WHERE topic_id = ?",
+                (t["id"],),
+            ).fetchall()
+
+            knowledge = db.execute(
+                "SELECT id, title, tags FROM knowledge WHERE topic_id = ?",
                 (t["id"],),
             ).fetchall()
 
@@ -215,6 +232,10 @@ def _get_curriculum(domain_name: str) -> dict:
                 {"id": e["id"], "title": e["title"], "difficulty": e["difficulty"], "completed": e["id"] in completed_ids}
                 for e in exercises
             ]
+            kn_list = [
+                {"id": k["id"], "title": k["title"], "tags": k["tags"]}
+                for k in knowledge
+            ]
             total = len(ex_list)
             done = sum(1 for e in ex_list if e["completed"])
 
@@ -224,6 +245,7 @@ def _get_curriculum(domain_name: str) -> dict:
                 "description": t["description"],
                 "parent_id": t["parent_id"],
                 "exercises": ex_list,
+                "knowledge": kn_list,
                 "progress": f"{done}/{total}" if total > 0 else "no exercises",
             })
 
@@ -262,15 +284,26 @@ def _add_topic(args: dict) -> dict:
         if not domain:
             return {"error": f"Domain '{args['domain']}' not found"}
 
+        # Find default curriculum for this domain
+        cur = db.execute(
+            "SELECT id FROM curricula WHERE domain_id = ? AND is_default = 1", (domain["id"],)
+        ).fetchone()
+        if not cur:
+            cur = db.execute(
+                "SELECT id FROM curricula WHERE domain_id = ? ORDER BY id LIMIT 1", (domain["id"],)
+            ).fetchone()
+        if not cur:
+            return {"error": f"No curriculum found for domain '{args['domain']}'"}
+
         parent_id = args.get("parent_id")
         row = db.execute(
-            "SELECT COALESCE(MAX(order_num), -1) + 1 as next_order FROM topics WHERE domain_id = ? AND parent_id IS ?",
-            (domain["id"], parent_id),
+            "SELECT COALESCE(MAX(order_num), -1) + 1 as next_order FROM topics WHERE curriculum_id = ? AND parent_id IS ?",
+            (cur["id"], parent_id),
         ).fetchone()
 
         cursor = db.execute(
-            "INSERT INTO topics (domain_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
-            (domain["id"], args["name"], args.get("description", ""), row["next_order"], parent_id),
+            "INSERT INTO topics (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
+            (cur["id"], args["name"], args.get("description", ""), row["next_order"], parent_id),
         )
         db.commit()
         _write_notify_file("curriculum_updated")
@@ -424,9 +457,10 @@ def _save_knowledge(args: dict) -> dict:
             if row:
                 domain_id = row["id"]
 
+        topic_id = args.get("topic_id")
         cursor = db.execute(
-            "INSERT INTO knowledge (domain_id, title, content, tags) VALUES (?, ?, ?, ?)",
-            (domain_id, args["title"], args.get("content", ""), args.get("tags", "")),
+            "INSERT INTO knowledge (domain_id, topic_id, title, content, tags) VALUES (?, ?, ?, ?, ?)",
+            (domain_id, topic_id, args["title"], args.get("content", ""), args.get("tags", "")),
         )
         db.commit()
         _write_notify_file("knowledge_updated")

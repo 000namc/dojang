@@ -12,6 +12,22 @@ export interface ExerciseSummary {
   is_completed: boolean;
 }
 
+export interface KnowledgeSummary {
+  id: number;
+  title: string;
+  tags: string;
+}
+
+export interface TopicItem {
+  id: number;
+  title: string;
+  type: "exercise" | "knowledge";
+  difficulty?: number;
+  is_completed?: boolean;
+  tags?: string;
+  order_num?: number;
+}
+
 export interface Topic {
   id: number;
   domain_id: number;
@@ -21,6 +37,8 @@ export interface Topic {
   parent_id: number | null;
   children: Topic[];
   exercises: ExerciseSummary[];
+  knowledge: KnowledgeSummary[];
+  items: TopicItem[];
   progress: number;
 }
 

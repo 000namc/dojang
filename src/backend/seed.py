@@ -55,7 +55,7 @@ async def seed_if_empty(db_path: str) -> None:
             curriculum_id = cursor.lastrowid
 
             for topic_data in curriculum.get("topics", []):
-                await _insert_topic(db, curriculum_id, topic_data, parent_id=None)
+                await _insert_topic(db, curriculum_id, topic_data, parent_id=None, domain_id=domain_id)
 
             # Seed knowledge notebooks
             knowledge_path = DOMAINS_DIR / domain_dir_name / "knowledge.json"
@@ -83,6 +83,7 @@ async def _insert_topic(
     curriculum_id: int,
     topic_data: dict,
     parent_id: int | None,
+    domain_id: int | None = None,
 ) -> None:
     cursor = await db.execute(
         "INSERT INTO topics (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
@@ -95,6 +96,21 @@ async def _insert_topic(
         ),
     )
     topic_id = cursor.lastrowid
+
+    # Knowledge cards embedded in the topic
+    for card in topic_data.get("knowledge", []):
+        await db.execute(
+            "INSERT INTO knowledge (topic_id, domain_id, title, content, tags, order_num) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                topic_id,
+                domain_id,
+                card["title"],
+                card.get("content", ""),
+                card.get("tags", ""),
+                card.get("order", 0),
+            ),
+        )
 
     for ex in topic_data.get("exercises", []):
         await db.execute(
@@ -112,4 +128,4 @@ async def _insert_topic(
         )
 
     for child in topic_data.get("children", []):
-        await _insert_topic(db, curriculum_id, child, parent_id=topic_id)
+        await _insert_topic(db, curriculum_id, child, parent_id=topic_id, domain_id=domain_id)

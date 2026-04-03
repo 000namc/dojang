@@ -4,6 +4,26 @@
       "name": "기본 명령어",
       "description": "init, add, commit, status, log",
       "order": 1,
+      "knowledge": [
+        {
+          "title": "Git이란?",
+          "content": "Git은 **분산 버전 관리 시스템**입니다.\n\n- 파일의 변경 이력을 **스냅샷**으로 저장합니다\n- 이전 상태로 되돌리거나, 변경점을 비교할 수 있습니다\n- **로컬**에서 독립적으로 작업하고, 나중에 **원격**과 동기화합니다\n- 여러 사람이 같은 코드를 **동시에** 수정할 수 있습니다",
+          "tags": "개념,기초",
+          "order": 0
+        },
+        {
+          "title": "Git의 3가지 영역",
+          "content": "Git은 파일을 3가지 영역으로 관리합니다:\n\n```\nWorking Directory → Staging Area → Repository\n (작업 디렉토리)     (스테이지)      (저장소)\n     git add →          git commit →\n```\n\n1. **Working Directory**: 실제 파일을 수정하는 곳\n2. **Staging Area (Index)**: 다음 커밋에 포함할 변경을 모아두는 곳\n3. **Repository (.git)**: 커밋된 스냅샷이 저장되는 곳\n\n이 3단계 구조가 Git의 핵심입니다.",
+          "tags": "개념,핵심",
+          "order": 1
+        },
+        {
+          "title": "커밋이란?",
+          "content": "커밋(Commit)은 프로젝트의 **스냅샷**입니다.\n\n각 커밋에는:\n- 고유한 **해시값** (SHA-1, 예: `a1b2c3d`)\n- **부모 커밋** 참조 (이전 커밋)\n- **변경 내용** (diff)\n- **작성자**, **날짜**, **메시지**\n\n```\nc1 ← c2 ← c3 ← c4 (HEAD)\n```\n\n커밋은 체인으로 연결되어 있어서 히스토리를 추적할 수 있습니다.",
+          "tags": "개념,커밋",
+          "order": 2
+        }
+      ],
       "exercises": [
         {
           "title": "저장소 상태 확인",
@@ -35,6 +55,14 @@
       "name": "브랜치",
       "description": "branch, checkout, switch",
       "order": 2,
+      "knowledge": [
+        {
+          "title": "브랜치란?",
+          "content": "브랜치(Branch)는 커밋을 가리키는 **포인터**입니다.\n\n```\n      feature\n        ↓\nc1 ← c2 ← c3\n        ↑\n       main\n```\n\n- `main`: 기본 브랜치\n- 새 브랜치를 만들면 = 새 포인터 생성 (복사가 아님!)\n- **HEAD**: 현재 내가 있는 브랜치를 가리키는 특별한 포인터\n- 브랜치를 전환하면 Working Directory의 파일이 바뀝니다",
+          "tags": "개념,브랜치",
+          "order": 0
+        }
+      ],
       "exercises": [
         {
           "title": "브랜치 목록 확인",
@@ -66,6 +94,14 @@
       "name": "머지 (merge)",
       "description": "fast-forward, 3-way merge",
       "order": 3,
+      "knowledge": [
+        {
+          "title": "Merge vs Rebase",
+          "content": "두 브랜치를 합치는 2가지 방법:\n\n**Merge**: 합류 커밋 생성\n```\nc1 ← c2 ← c4 ← M (merge commit)\n      ↖ c3 ↗\n```\n- 히스토리가 있는 그대로 보존됨\n- 머지 커밋이 추가됨\n\n**Rebase**: 히스토리를 일직선으로\n```\nc1 ← c2 ← c4 ← c3' (rebased)\n```\n- 깔끔한 히스토리\n- 커밋이 새로 만들어짐 (해시 변경)\n- **공유된 브랜치에서는 위험!**",
+          "tags": "개념,머지,리베이스",
+          "order": 0
+        }
+      ],
       "exercises": [
         {
           "title": "Fast-forward 머지",
@@ -89,6 +125,14 @@
       "name": "충돌 해결",
       "description": "merge conflict 해결",
       "order": 4,
+      "knowledge": [
+        {
+          "title": "충돌 해결 원리",
+          "content": "같은 파일의 같은 부분을 다르게 수정하면 **충돌(Conflict)**이 발생합니다.\n\nGit이 충돌 표시를 넣어줍니다:\n```\n<<<<<<< HEAD\n현재 브랜치의 내용\n=======\n합치려는 브랜치의 내용\n>>>>>>> feature\n```\n\n해결 방법:\n1. 파일을 열어서 원하는 내용만 남기기\n2. `<<<<`, `====`, `>>>>` 표시 제거\n3. `git add` → `git commit`",
+          "tags": "개념,충돌",
+          "order": 0
+        }
+      ],
       "exercises": [
         {
           "title": "충돌 상황 확인",

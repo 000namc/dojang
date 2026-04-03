@@ -62,6 +62,7 @@ async def delete_notebook(notebook_id: int, db: aiosqlite.Connection = Depends(g
 class CreateKnowledgeRequest(BaseModel):
     notebook_id: int | None = None
     domain_id: int | None = None
+    topic_id: int | None = None
     title: str
     content: str = ""
     tags: str = ""
@@ -126,8 +127,8 @@ async def get_knowledge(knowledge_id: int, db: aiosqlite.Connection = Depends(ge
 @router.post("/knowledge")
 async def create_knowledge(req: CreateKnowledgeRequest, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "INSERT INTO knowledge (notebook_id, domain_id, title, content, tags) VALUES (?, ?, ?, ?, ?)",
-        (req.notebook_id, req.domain_id, req.title, req.content, req.tags),
+        "INSERT INTO knowledge (notebook_id, domain_id, topic_id, title, content, tags) VALUES (?, ?, ?, ?, ?, ?)",
+        (req.notebook_id, req.domain_id, req.topic_id, req.title, req.content, req.tags),
     )
     await db.commit()
     return {"id": cursor.lastrowid, "title": req.title}

@@ -7,12 +7,12 @@ import type {
   AttemptResult,
 } from "../types";
 import * as api from "../api/client";
-import type { Curriculum, Notebook, KnowledgeCard } from "../api/client";
+import type { Curriculum, Notebook, KnowledgeCard, Checkpoint } from "../api/client";
 
-export type AppMode = "practice" | "explore";
+export type SelectedItemType = "exercise" | "knowledge" | null;
 
 interface DojangState {
-  mode: AppMode;
+  selectedItemType: SelectedItemType;
 
   // Domain
   domains: Domain[];
@@ -39,12 +39,14 @@ interface DojangState {
   currentCard: KnowledgeCard | null;
   isEditingCard: boolean;
 
+  // Checkpoints
+  checkpoints: Checkpoint[];
+
   // Polling
   _lastNotifyTs: number;
   _pollInterval: ReturnType<typeof setInterval> | null;
 
   // Actions
-  setMode: (mode: AppMode) => void;
   loadDomains: () => Promise<void>;
   selectDomain: (domainId: number) => Promise<void>;
   loadCurricula: () => Promise<void>;
@@ -52,6 +54,7 @@ interface DojangState {
   createCurriculum: (name: string) => Promise<void>;
   deleteCurriculum: (curriculumId: number) => Promise<void>;
   refreshCurriculumTree: () => Promise<void>;
+  deleteTopic: (topicId: number) => Promise<void>;
   selectExercise: (exerciseId: number) => Promise<void>;
   setEditorCode: (code: string) => void;
   runCode: () => Promise<void>;
@@ -67,12 +70,16 @@ interface DojangState {
   saveCard: (id: number, updates: { title?: string; content?: string; tags?: string }) => Promise<void>;
   deleteCard: (id: number) => Promise<void>;
   setEditingCard: (editing: boolean) => void;
+  loadCheckpoints: () => Promise<void>;
+  saveCheckpoint: (name?: string) => Promise<void>;
+  restoreCheckpoint: (checkpointId: number) => Promise<void>;
+  deleteCheckpoint: (checkpointId: number) => Promise<void>;
   startNotifyPolling: () => void;
   stopNotifyPolling: () => void;
 }
 
 export const useStore = create<DojangState>((set, get) => ({
-  mode: "practice",
+  selectedItemType: null,
   domains: [],
   currentDomain: null,
   curricula: [],
@@ -90,10 +97,9 @@ export const useStore = create<DojangState>((set, get) => ({
   selectedCardId: null,
   currentCard: null,
   isEditingCard: false,
+  checkpoints: [],
   _lastNotifyTs: Date.now() / 1000,
   _pollInterval: null,
-
-  setMode: (mode) => set({ mode }),
 
   loadDomains: async () => {
     const domains = await api.getDomains();
@@ -116,6 +122,12 @@ export const useStore = create<DojangState>((set, get) => ({
       editorCode: "",
       lastResult: null,
       lastAttempt: null,
+      notebooks: [],
+      currentNotebookId: null,
+      knowledgeCards: [],
+      selectedCardId: null,
+      currentCard: null,
+      selectedItemType: null,
     });
     if (domain) {
       await get().loadCurricula();
@@ -128,7 +140,6 @@ export const useStore = create<DojangState>((set, get) => ({
     if (!currentDomain) return;
     const curricula = await api.listCurricula(currentDomain.id);
     set({ curricula });
-    // Auto-select default or first
     if (curricula.length > 0) {
       const def = curricula.find((c) => c.is_default) || curricula[0];
       await get().selectCurriculum(def.id);
@@ -136,9 +147,10 @@ export const useStore = create<DojangState>((set, get) => ({
   },
 
   selectCurriculum: async (curriculumId: number) => {
-    set({ currentCurriculumId: curriculumId, selectedExerciseId: null, currentExercise: null });
+    set({ currentCurriculumId: curriculumId, selectedExerciseId: null, currentExercise: null, selectedCardId: null, currentCard: null, selectedItemType: null });
     const tree = await api.getCurriculumTree(curriculumId);
     set({ curriculumTree: tree });
+    await get().loadCheckpoints();
   },
 
   createCurriculum: async (name: string) => {
@@ -161,15 +173,23 @@ export const useStore = create<DojangState>((set, get) => ({
     set({ curriculumTree: tree });
   },
 
+  deleteTopic: async (topicId: number) => {
+    await api.deleteTopic(topicId);
+    set({ selectedExerciseId: null, currentExercise: null, selectedCardId: null, currentCard: null, selectedItemType: null });
+    await get().refreshCurriculumTree();
+  },
+
   selectExercise: async (exerciseId: number) => {
     const exercise = await api.getExercise(exerciseId);
     set({
-      mode: "practice",
+      selectedItemType: "exercise",
       selectedExerciseId: exerciseId,
       currentExercise: exercise,
       editorCode: exercise.initial_code || "",
       lastResult: null,
       lastAttempt: null,
+      selectedCardId: null,
+      currentCard: null,
     });
   },
 
@@ -273,7 +293,14 @@ export const useStore = create<DojangState>((set, get) => ({
   selectCard: async (id) => {
     try {
       const card = await api.getKnowledge(id);
-      set({ selectedCardId: id, currentCard: card, isEditingCard: false, mode: "explore" });
+      set({
+        selectedItemType: "knowledge",
+        selectedCardId: id,
+        currentCard: card,
+        isEditingCard: false,
+        selectedExerciseId: null,
+        currentExercise: null,
+      });
     } catch {}
   },
 
@@ -299,12 +326,37 @@ export const useStore = create<DojangState>((set, get) => ({
   deleteCard: async (id) => {
     try {
       await api.deleteKnowledge(id);
-      set({ selectedCardId: null, currentCard: null });
+      set({ selectedCardId: null, currentCard: null, selectedItemType: null });
       await get().loadKnowledge();
     } catch {}
   },
 
   setEditingCard: (editing) => set({ isEditingCard: editing }),
+
+  loadCheckpoints: async () => {
+    const { currentCurriculumId } = get();
+    if (!currentCurriculumId) return;
+    const checkpoints = await api.listCheckpoints(currentCurriculumId);
+    set({ checkpoints });
+  },
+
+  saveCheckpoint: async (name?: string) => {
+    const { currentCurriculumId } = get();
+    if (!currentCurriculumId) return;
+    await api.createCheckpoint(currentCurriculumId, name);
+    await get().loadCheckpoints();
+  },
+
+  restoreCheckpoint: async (checkpointId: number) => {
+    await api.restoreCheckpoint(checkpointId);
+    set({ selectedExerciseId: null, currentExercise: null, selectedCardId: null, currentCard: null, selectedItemType: null });
+    await get().refreshCurriculumTree();
+  },
+
+  deleteCheckpoint: async (checkpointId: number) => {
+    await api.deleteCheckpoint(checkpointId);
+    await get().loadCheckpoints();
+  },
 
   startNotifyPolling: () => {
     if (get()._pollInterval) return;
@@ -319,6 +371,7 @@ export const useStore = create<DojangState>((set, get) => ({
           }
           if (data.event === "knowledge_updated") {
             await get().loadKnowledge();
+            await get().refreshCurriculumTree();
           }
         }
       } catch {}
