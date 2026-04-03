@@ -14,7 +14,7 @@
 
 ```bash
 # 프로덕션 (한 줄)
-docker compose up -d    # http://localhost:8010
+cd build && docker compose --profile prod up -d    # http://localhost:8010
 
 # 개발 (hot-reload)
 cd build && docker compose up -d && cd ..     # 도메인 컨테이너만
