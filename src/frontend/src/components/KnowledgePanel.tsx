@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Pencil, Trash2, Save, X, Tag } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import Markdown from "./Markdown";
 import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
 
@@ -65,12 +65,12 @@ export default function KnowledgePanel() {
 
         {/* Content */}
         <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
-          <ReactMarkdown>{currentCard.content || "*아직 내용이 없습니다. 편집 버튼을 눌러 작성하세요.*"}</ReactMarkdown>
+          <Markdown>{currentCard.content || "*아직 내용이 없습니다. 편집 버튼을 눌러 작성하세요.*"}</Markdown>
         </div>
 
         {/* Footer */}
         <div className="text-xs text-gray-400">
-          {currentCard.domain_name && <span className="mr-3">{currentCard.domain_name}</span>}
+          {currentCard.topic_name && <span className="mr-3">{currentCard.topic_name}</span>}
           마지막 수정: {new Date(currentCard.updated_at).toLocaleString("ko")}
         </div>
       </div>

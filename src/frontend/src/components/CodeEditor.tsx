@@ -3,10 +3,10 @@ import { useStore } from "../stores/store";
 import { useTheme } from "../stores/theme";
 
 export default function CodeEditor({ className }: { className?: string }) {
-  const { editorCode, setEditorCode, currentDomain, runCode } = useStore();
+  const { editorCode, setEditorCode, currentTopic, runCode } = useStore();
   const { dark } = useTheme();
 
-  const language = currentDomain?.name === "SQL" ? "sql" : "shell";
+  const language = currentTopic?.name === "SQL" ? "sql" : "shell";
 
   const handleMount: OnMount = (editor, monaco) => {
     editor.addAction({

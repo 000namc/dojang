@@ -1,3 +1,5 @@
+import base64
+
 import docker
 
 
@@ -43,9 +45,36 @@ class ContainerService:
         }
 
     def execute_shell(self, container_name: str, command: str, workdir: str = "/workspace") -> dict:
-        """Execute a shell command — used for CLI and Docker domains."""
+        """Execute a shell command — used for CLI and Docker topics."""
         container = self.client.containers.get(container_name)
         cmd = ["bash", "-c", f"cd {workdir} && {command}"]
+        exit_code, output = container.exec_run(cmd, demux=True)
+        stdout = (output[0] or b"").decode() if isinstance(output, tuple) else (output or b"").decode()
+        stderr = (output[1] or b"").decode() if isinstance(output, tuple) else ""
+
+        if exit_code != 0:
+            return {
+                "result_type": "terminal",
+                "output": stdout,
+                "error": stderr or stdout,
+                "columns": None,
+                "rows": None,
+            }
+
+        return {
+            "result_type": "terminal",
+            "output": stdout,
+            "error": None,
+            "columns": None,
+            "rows": None,
+        }
+
+    def execute_python(self, container_name: str, code: str) -> dict:
+        """Write code to a temp file and execute with python3."""
+        container = self.client.containers.get(container_name)
+        # Write code to temp file to handle multi-line scripts properly
+        encoded = base64.b64encode(code.encode()).decode()
+        cmd = ["bash", "-c", f"echo {encoded} | base64 -d > /tmp/_run.py && cd /workspace && python3 /tmp/_run.py"]
         exit_code, output = container.exec_run(cmd, demux=True)
         stdout = (output[0] or b"").decode() if isinstance(output, tuple) else (output or b"").decode()
         stderr = (output[1] or b"").decode() if isinstance(output, tuple) else ""

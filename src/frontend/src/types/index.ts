@@ -1,4 +1,4 @@
-export interface Domain {
+export interface Topic {
   id: number;
   name: string;
   description: string | null;
@@ -28,14 +28,14 @@ export interface TopicItem {
   order_num?: number;
 }
 
-export interface Topic {
+export interface Subject {
   id: number;
-  domain_id: number;
+  topic_id: number;
   name: string;
   description: string | null;
   order_num: number;
   parent_id: number | null;
-  children: Topic[];
+  children: Subject[];
   exercises: ExerciseSummary[];
   knowledge: KnowledgeSummary[];
   items: TopicItem[];
@@ -43,15 +43,15 @@ export interface Topic {
 }
 
 export interface CurriculumTree {
-  curriculum: { id: number; domain_id: number; name: string; description: string; domain_name: string; container_name: string };
-  topics: Topic[];
+  curriculum: { id: number; topic_id: number; name: string; description: string; topic_name: string; container_name: string };
+  subjects: Subject[];
 }
 
 export type UiType = "auto" | "terminal" | "code" | "text";
 
 export interface Exercise {
   id: number;
-  topic_id: number;
+  subject_id: number;
   title: string;
   description: string | null;
   initial_code: string;
@@ -59,7 +59,7 @@ export interface Exercise {
   check_value: string | null;
   difficulty: number;
   ui_type: UiType;
-  domain_name: string;
+  topic_name: string;
   created_by: string;
 }
 
@@ -76,4 +76,17 @@ export interface AttemptResult {
   is_correct: boolean;
   result: string;
   feedback: string | null;
+}
+
+export interface SharedCurriculum {
+  id: number;
+  user_id: number;
+  curriculum_id: number | null;
+  title: string;
+  description: string;
+  subject: string;
+  tags: string;
+  upvotes: number;
+  downloads: number;
+  shared_at: string;
 }

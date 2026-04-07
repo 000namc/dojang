@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from src.backend.config import get_settings
 from src.backend.database import init_db
 from src.backend.seed import seed_if_empty
-from src.backend.routers import domains, curriculum, exercises, terminal, knowledge
+from src.backend.routers import topics, curriculum, exercises, terminal, knowledge, chat, community
 
 
 @asynccontextmanager
@@ -33,11 +33,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(domains.router)
+app.include_router(topics.router)
 app.include_router(curriculum.router)
 app.include_router(exercises.router)
 app.include_router(terminal.router)
 app.include_router(knowledge.router)
+app.include_router(chat.router)
+app.include_router(community.router)
 
 
 @app.get("/health")

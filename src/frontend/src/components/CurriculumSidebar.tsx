@@ -5,158 +5,68 @@ import {
   CheckCircle2,
   Circle,
   BookOpen,
-  Plus,
   Trash2,
+  Share2,
   X,
-  Save,
-  RotateCcw,
+  MoreHorizontal,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
-import type { Topic, TopicItem, CurriculumTree } from "../types";
+import { useCommunity } from "../stores/community";
+import type { Subject, TopicItem, CurriculumTree } from "../types";
 
 export default function CurriculumSidebar({ className }: { className?: string }) {
   const {
-    domains,
-    currentDomain,
+    topics,
+    currentTopic,
     curricula,
     currentCurriculumId,
     curriculumTree,
     selectedExerciseId,
     selectedCardId,
-    checkpoints,
-    loadDomains,
-    selectDomain,
+    loadTopics,
+    selectTopic,
     selectCurriculum,
-    createCurriculum,
     deleteCurriculum,
-    deleteTopic,
+    deleteSubject,
+    deleteExercise,
+    deleteKnowledge,
     selectExercise,
     selectCard,
-    saveCheckpoint,
-    restoreCheckpoint,
-    deleteCheckpoint,
   } = useStore();
+  const communityStore = useCommunity();
 
-  const [showNewCur, setShowNewCur] = useState(false);
-  const [newCurName, setNewCurName] = useState("");
-  const [showCheckpoints, setShowCheckpoints] = useState(false);
-  const [showSaveCp, setShowSaveCp] = useState(false);
-  const [cpName, setCpName] = useState("");
+  useEffect(() => { loadTopics(); }, []);
 
-  useEffect(() => { loadDomains(); }, []);
-
-  const handleCreate = async () => {
-    if (!newCurName.trim()) return;
-    await createCurriculum(newCurName.trim());
-    setNewCurName("");
-    setShowNewCur(false);
+  const handleShare = (cur: { id: number; name: string }) => {
+    communityStore.share({
+      curriculum_id: cur.id,
+      title: cur.name,
+      description: "",
+      subject: currentTopic?.name,
+      tags: "",
+    });
   };
 
   return (
     <div className={cn("flex flex-col bg-white dark:bg-gray-900 overflow-hidden", className)}>
-      {/* Domain selector + actions */}
-      <div className="border-b border-gray-200 dark:border-gray-800 p-3 space-y-2">
-        <select
-          value={currentDomain?.id ?? ""}
-          onChange={(e) => selectDomain(Number(e.target.value))}
-          className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-gray-200 px-3 py-2 text-sm font-medium focus:border-primary-500 focus:outline-none"
-        >
-          {domains.map((d) => (
-            <option key={d.id} value={d.id}>{d.name}</option>
-          ))}
-        </select>
-
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowNewCur(!showNewCur)} className="flex items-center gap-1 rounded p-1 text-xs text-gray-400 hover:text-primary-500 hover:bg-gray-100 dark:hover:bg-gray-800">
-            <Plus size={12} />
-            추가
-          </button>
-          <button
-            onClick={() => setShowSaveCp(!showSaveCp)}
-            className="flex items-center gap-1 rounded p-1 text-xs text-gray-400 hover:text-green-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-            title="체크포인트 저장"
+      {/* Topic selector */}
+      <div className="px-3 py-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="relative">
+          <select
+            value={currentTopic?.id ?? ""}
+            onChange={(e) => selectTopic(Number(e.target.value))}
+            className="w-full rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500 appearance-none cursor-pointer pr-8"
           >
-            <Save size={12} />
-            저장
-          </button>
-          <button
-            onClick={() => setShowCheckpoints(!showCheckpoints)}
-            className="flex items-center gap-1 rounded p-1 text-xs text-gray-400 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-            title="체크포인트 불러오기"
-          >
-            <RotateCcw size={12} />
-            불러오기{checkpoints.length > 0 && ` (${checkpoints.length})`}
-          </button>
-        </div>
-
-        {showNewCur && (
-          <div className="flex items-center gap-1">
-            <input
-              value={newCurName}
-              onChange={(e) => setNewCurName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              placeholder="커리큘럼 이름"
-              className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-gray-200 px-2 py-1 text-xs focus:border-primary-500 focus:outline-none"
-              autoFocus
-            />
-            <button onClick={handleCreate} className="btn-primary text-xs px-2 py-1">만들기</button>
-          </div>
-        )}
-
-        {showSaveCp && (
-          <div className="flex items-center gap-1">
-            <input
-              value={cpName}
-              onChange={(e) => setCpName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  saveCheckpoint(cpName.trim() || undefined);
-                  setCpName("");
-                  setShowSaveCp(false);
-                }
-              }}
-              placeholder="체크포인트 이름"
-              className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 dark:text-gray-200 px-2 py-1 text-xs focus:border-primary-500 focus:outline-none"
-              autoFocus
-            />
-            <button
-              onClick={() => { saveCheckpoint(cpName.trim() || undefined); setCpName(""); setShowSaveCp(false); }}
-              className="btn-primary text-xs px-2 py-1"
-            >
-              저장
-            </button>
-          </div>
-        )}
-
-        {showCheckpoints && (
-          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-2 space-y-1">
-            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">체크포인트</div>
-            {checkpoints.length === 0 && (
-              <p className="text-xs text-gray-400 px-2 py-1">저장된 체크포인트가 없습니다</p>
-            )}
-            {checkpoints.map((cp) => (
-              <div key={cp.id} className="flex items-center gap-1 text-xs">
-                <button
-                  onClick={() => { if (confirm(`"${cp.name}"을 불러올까요?`)) { restoreCheckpoint(cp.id); setShowCheckpoints(false); } }}
-                  className="flex-1 text-left rounded px-2 py-1 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                >
-                  <div className="truncate">{cp.name}</div>
-                  <div className="text-[10px] text-gray-400">{new Date(cp.created_at).toLocaleString("ko")}</div>
-                </button>
-                <button
-                  onClick={() => deleteCheckpoint(cp.id)}
-                  className="rounded p-0.5 text-gray-400 hover:text-red-500 shrink-0"
-                >
-                  <X size={10} />
-                </button>
-              </div>
+            {topics.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
             ))}
-          </div>
-        )}
+          </select>
+          <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+        </div>
       </div>
 
-      {/* Curricula as accordion sections */}
+      {/* Curricula list */}
       <div className="flex-1 overflow-y-auto">
         {curricula.map((cur) => (
           <CurriculumSection
@@ -165,12 +75,15 @@ export default function CurriculumSidebar({ className }: { className?: string })
             isActive={cur.id === currentCurriculumId}
             onSelect={() => selectCurriculum(cur.id)}
             onDelete={!cur.is_default ? () => { if (confirm(`"${cur.name}" 삭제?`)) deleteCurriculum(cur.id); } : undefined}
+            onShare={() => handleShare(cur)}
             curriculumTree={cur.id === currentCurriculumId ? curriculumTree : null}
             selectedExerciseId={selectedExerciseId}
             selectedCardId={selectedCardId}
             onSelectExercise={selectExercise}
             onSelectCard={selectCard}
-            onDeleteTopic={deleteTopic}
+            onDeleteSubject={deleteSubject}
+            onDeleteExercise={deleteExercise}
+            onDeleteKnowledge={deleteKnowledge}
           />
         ))}
         {curricula.length === 0 && (
@@ -186,30 +99,34 @@ function CurriculumSection({
   isActive,
   onSelect,
   onDelete,
+  onShare,
   curriculumTree,
   selectedExerciseId,
   selectedCardId,
   onSelectExercise,
   onSelectCard,
-  onDeleteTopic,
+  onDeleteSubject,
+  onDeleteExercise,
+  onDeleteKnowledge,
 }: {
   curriculum: { id: number; name: string; is_default: number };
   isActive: boolean;
   onSelect: () => void;
   onDelete?: () => void;
+  onShare?: () => void;
   curriculumTree: CurriculumTree | null;
   selectedExerciseId: number | null;
   selectedCardId: number | null;
   onSelectExercise: (id: number) => void;
   onSelectCard: (id: number) => void;
-  onDeleteTopic: (id: number) => void;
+  onDeleteSubject: (id: number) => void;
+  onDeleteExercise: (id: number) => void;
+  onDeleteKnowledge: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
 
   const handleToggle = () => {
-    if (!isActive) {
-      onSelect();
-    }
+    if (!isActive) onSelect();
     setExpanded(!expanded);
   };
 
@@ -218,46 +135,56 @@ function CurriculumSection({
   }, [isActive]);
 
   return (
-    <div className="border-b border-gray-100 dark:border-gray-800 last:border-b-0">
-      <div className="group flex items-center">
+    <div className="last:border-b-0">
+      <div className="group flex items-center mx-2 mt-1">
         <button
           onClick={handleToggle}
           className={cn(
-            "flex flex-1 items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold transition-colors",
+            "flex flex-1 items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] transition-colors",
             isActive
-              ? "text-gray-900 dark:text-gray-100"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300",
+              ? "font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800/50"
+              : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/30",
           )}
         >
-          {expanded ? <ChevronDown size={14} className="shrink-0" /> : <ChevronRight size={14} className="shrink-0" />}
+          {expanded ? <ChevronDown size={13} className="shrink-0 text-gray-400" /> : <ChevronRight size={13} className="shrink-0 text-gray-400" />}
           <span className="truncate">{curriculum.name}</span>
         </button>
+        {onShare && (
+          <button
+            onClick={onShare}
+            className="rounded p-0.5 text-gray-400 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Share to community"
+          >
+            <Share2 size={12} />
+          </button>
+        )}
         {onDelete && (
           <button
             onClick={onDelete}
             className="mr-2 rounded p-0.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="삭제"
           >
             <Trash2 size={12} />
           </button>
         )}
       </div>
       {expanded && isActive && curriculumTree && (
-        <div className="px-2 pb-2">
-          {curriculumTree.topics.map((topic) => (
-            <TopicNode
-              key={topic.id}
-              topic={topic}
+        <div className="px-2 pb-2 pt-1">
+          {curriculumTree.subjects.map((subject) => (
+            <SubjectNode
+              key={subject.id}
+              subject={subject}
               selectedExerciseId={selectedExerciseId}
               selectedCardId={selectedCardId}
               onSelectExercise={onSelectExercise}
               onSelectCard={onSelectCard}
-              onDeleteTopic={onDeleteTopic}
+              onDeleteSubject={onDeleteSubject}
+              onDeleteExercise={onDeleteExercise}
+              onDeleteKnowledge={onDeleteKnowledge}
               depth={0}
             />
           ))}
-          {curriculumTree.topics.length === 0 && (
-            <p className="px-2 py-3 text-center text-xs text-gray-400">아직 토픽이 없습니다.<br />Claude Code에서 추가해보세요.</p>
+          {curriculumTree.subjects.length === 0 && (
+            <p className="px-3 py-3 text-center text-xs text-gray-400">아직 토픽이 없습니다</p>
           )}
         </div>
       )}
@@ -265,80 +192,76 @@ function CurriculumSection({
   );
 }
 
-function TopicNode({
-  topic,
+function SubjectNode({
+  subject,
   selectedExerciseId,
   selectedCardId,
   onSelectExercise,
   onSelectCard,
-  onDeleteTopic,
+  onDeleteSubject,
+  onDeleteExercise,
+  onDeleteKnowledge,
   depth,
 }: {
-  topic: Topic;
+  subject: Subject;
   selectedExerciseId: number | null;
   selectedCardId: number | null;
   onSelectExercise: (id: number) => void;
   onSelectCard: (id: number) => void;
-  onDeleteTopic: (id: number) => void;
+  onDeleteSubject: (id: number) => void;
+  onDeleteExercise: (id: number) => void;
+  onDeleteKnowledge: (id: number) => void;
   depth: number;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const items = topic.items || [];
-  const hasChildren = topic.children.length > 0 || items.length > 0;
+  const items = subject.items || [];
+  const hasChildren = subject.children.length > 0 || items.length > 0;
 
   return (
-    <div style={{ paddingLeft: depth * 8 }}>
+    <div style={{ paddingLeft: depth * 12 }}>
       <div className="group flex items-center">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex flex-1 items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800/70"
+          className="flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-left text-[13px] hover:bg-gray-50 dark:hover:bg-gray-800/50"
         >
           {hasChildren ? (
-            expanded ? <ChevronDown size={14} className="text-gray-400 dark:text-gray-500 shrink-0" /> : <ChevronRight size={14} className="text-gray-400 dark:text-gray-500 shrink-0" />
+            expanded ? <ChevronDown size={13} className="text-gray-400 shrink-0" /> : <ChevronRight size={13} className="text-gray-400 shrink-0" />
           ) : (
-            <BookOpen size={14} className="text-gray-400 dark:text-gray-500 shrink-0" />
+            <span className="w-[13px] shrink-0" />
           )}
-          <span className="font-medium text-gray-700 dark:text-gray-200 truncate">{topic.name}</span>
-          {topic.progress > 0 && (
-            <span className="ml-auto text-xs text-primary-600 dark:text-primary-400 shrink-0">{Math.round(topic.progress * 100)}%</span>
+          <span className="font-medium text-gray-700 dark:text-gray-300 truncate">{subject.name}</span>
+          {subject.progress > 0 && (
+            <span className="ml-auto text-[11px] text-primary-500 shrink-0">{Math.round(subject.progress * 100)}%</span>
           )}
         </button>
         <button
-          onClick={() => { if (confirm(`"${topic.name}" 토픽을 삭제할까요?`)) onDeleteTopic(topic.id); }}
-          className="mr-1 rounded p-0.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-          title="토픽 삭제"
+          onClick={() => { if (confirm(`"${subject.name}" 토픽을 삭제할까요?`)) onDeleteSubject(subject.id); }}
+          className="mr-1 rounded p-0.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+          title="삭제"
         >
           <X size={12} />
         </button>
       </div>
       {expanded && (
-        <div className="ml-2">
+        <div className="ml-1">
           {items.map((item) =>
             item.type === "knowledge" ? (
-              <KnowledgeItem
-                key={`k-${item.id}`}
-                item={item}
-                selected={selectedCardId === item.id}
-                onSelect={() => onSelectCard(item.id)}
-              />
+              <KnowledgeItem key={`k-${item.id}`} item={item} selected={selectedCardId === item.id} onSelect={() => onSelectCard(item.id)} onDelete={() => { if (confirm(`"${item.title}" 삭제?`)) onDeleteKnowledge(item.id); }} />
             ) : (
-              <ExerciseItem
-                key={`e-${item.id}`}
-                item={item}
-                selected={selectedExerciseId === item.id}
-                onSelect={() => onSelectExercise(item.id)}
-              />
+              <ExerciseItem key={`e-${item.id}`} item={item} selected={selectedExerciseId === item.id} onSelect={() => onSelectExercise(item.id)} onDelete={() => { if (confirm(`"${item.title}" 삭제?`)) onDeleteExercise(item.id); }} />
             ),
           )}
-          {topic.children.map((child) => (
-            <TopicNode
+          {subject.children.map((child) => (
+            <SubjectNode
               key={child.id}
-              topic={child}
+              subject={child}
               selectedExerciseId={selectedExerciseId}
               selectedCardId={selectedCardId}
               onSelectExercise={onSelectExercise}
               onSelectCard={onSelectCard}
-              onDeleteTopic={onDeleteTopic}
+              onDeleteSubject={onDeleteSubject}
+              onDeleteExercise={onDeleteExercise}
+              onDeleteKnowledge={onDeleteKnowledge}
               depth={depth + 1}
             />
           ))}
@@ -348,41 +271,59 @@ function TopicNode({
   );
 }
 
-function KnowledgeItem({ item, selected, onSelect }: { item: TopicItem; selected: boolean; onSelect: () => void }) {
+function KnowledgeItem({ item, selected, onSelect, onDelete }: { item: TopicItem; selected: boolean; onSelect: () => void; onDelete: () => void }) {
   return (
-    <button
-      onClick={onSelect}
-      className={cn(
-        "flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left text-sm transition-colors",
-        selected
-          ? "bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
-          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/70",
-      )}
-    >
-      <BookOpen size={13} className="text-amber-500 dark:text-amber-400 shrink-0" />
-      <span className="truncate">{item.title}</span>
-    </button>
+    <div className="group flex items-center">
+      <button
+        onClick={onSelect}
+        className={cn(
+          "flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1 text-left text-[13px] transition-colors",
+          selected
+            ? "bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+            : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50",
+        )}
+      >
+        <BookOpen size={12} className="text-amber-500 dark:text-amber-400 shrink-0" />
+        <span className="truncate">{item.title}</span>
+      </button>
+      <button
+        onClick={onDelete}
+        className="mr-1 rounded p-0.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+        title="삭제"
+      >
+        <X size={10} />
+      </button>
+    </div>
   );
 }
 
-function ExerciseItem({ item, selected, onSelect }: { item: TopicItem; selected: boolean; onSelect: () => void }) {
+function ExerciseItem({ item, selected, onSelect, onDelete }: { item: TopicItem; selected: boolean; onSelect: () => void; onDelete: () => void }) {
   return (
-    <button
-      onClick={onSelect}
-      className={cn(
-        "flex w-full items-center gap-1.5 rounded-lg px-2 py-1 text-left text-sm transition-colors",
-        selected
-          ? "bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
-          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800/70",
-      )}
-    >
-      {item.is_completed ? (
-        <CheckCircle2 size={13} className="text-green-500 shrink-0" />
-      ) : (
-        <Circle size={13} className="text-gray-300 dark:text-gray-600 shrink-0" />
-      )}
-      <span className="truncate">{item.title}</span>
-      <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 shrink-0">Lv.{item.difficulty}</span>
-    </button>
+    <div className="group flex items-center">
+      <button
+        onClick={onSelect}
+        className={cn(
+          "flex flex-1 items-center gap-1.5 rounded-lg px-2.5 py-1 text-left text-[13px] transition-colors",
+          selected
+            ? "bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+            : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50",
+        )}
+      >
+        {item.is_completed ? (
+          <CheckCircle2 size={12} className="text-green-500 shrink-0" />
+        ) : (
+          <Circle size={12} className="text-gray-300 dark:text-gray-600 shrink-0" />
+        )}
+        <span className="truncate">{item.title}</span>
+        <span className="ml-auto text-[10px] text-gray-400 shrink-0">Lv.{item.difficulty}</span>
+      </button>
+      <button
+        onClick={onDelete}
+        className="mr-1 rounded p-0.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+        title="삭제"
+      >
+        <X size={10} />
+      </button>
+    </div>
   );
 }

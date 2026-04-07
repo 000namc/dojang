@@ -9,7 +9,7 @@ interface HistoryEntry {
 }
 
 export default function TerminalWidget({ className }: { className?: string }) {
-  const { currentDomain, isExecuting, runCodeRaw } = useStore();
+  const { currentTopic, isExecuting, runCodeRaw } = useStore();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [input, setInput] = useState("");
   const [cmdHistory, setCmdHistory] = useState<string[]>([]);
@@ -17,8 +17,8 @@ export default function TerminalWidget({ className }: { className?: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const domainName = currentDomain?.name?.toLowerCase() ?? "dojang";
-  const prompt = `user@${domainName} /workspace $`;
+  const topicName = currentTopic?.name?.toLowerCase() ?? "dojang";
+  const prompt = `user@${topicName} /workspace $`;
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);

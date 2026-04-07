@@ -1,22 +1,22 @@
 import { useState } from "react";
 import { Send, Play } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import Markdown from "./Markdown";
 import { useStore } from "../stores/store";
 import type { UiType } from "../types";
 import TerminalWidget from "./TerminalWidget";
 import CodeEditor from "./CodeEditor";
 import ResultPanel from "./ResultPanel";
 
-function resolveUiType(uiType: UiType, domainName: string): "terminal" | "code" | "text" {
+function resolveUiType(uiType: UiType, topicName: string): "terminal" | "code" | "text" {
   if (uiType !== "auto") return uiType;
-  if (domainName === "SQL") return "code";
+  if (topicName === "SQL") return "code";
   return "terminal";
 }
 
 export default function ExercisePanel() {
   const {
     currentExercise,
-    currentDomain,
+    currentTopic,
     isExecuting,
     lastAttempt,
     editorCode,
@@ -37,8 +37,8 @@ export default function ExercisePanel() {
     );
   }
 
-  const domainName = currentExercise.domain_name || currentDomain?.name || "";
-  const resolved = resolveUiType(currentExercise.ui_type || "auto", domainName);
+  const topicName = currentExercise.topic_name || currentTopic?.name || "";
+  const resolved = resolveUiType(currentExercise.ui_type || "auto", topicName);
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-white dark:bg-gray-900">
@@ -55,7 +55,7 @@ export default function ExercisePanel() {
           </div>
           {currentExercise.description && (
             <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
-              <ReactMarkdown>{currentExercise.description}</ReactMarkdown>
+              <Markdown>{currentExercise.description}</Markdown>
             </div>
           )}
         </div>

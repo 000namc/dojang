@@ -1,15 +1,15 @@
 from pydantic import BaseModel
 
 
-# --- Domain ---
-class Domain(BaseModel):
+# --- Topic (was Domain) ---
+class Topic(BaseModel):
     id: int
     name: str
     description: str | None = None
     container_name: str
 
 
-# --- Topic ---
+# --- Subject (was Topic) ---
 class ExerciseSummary(BaseModel):
     id: int
     title: str
@@ -17,27 +17,27 @@ class ExerciseSummary(BaseModel):
     is_completed: bool = False
 
 
-class Topic(BaseModel):
+class Subject(BaseModel):
     id: int
-    domain_id: int
+    topic_id: int
     name: str
     description: str | None = None
     order_num: int
     parent_id: int | None = None
-    children: list["Topic"] = []
+    children: list["Subject"] = []
     exercises: list[ExerciseSummary] = []
     progress: float = 0.0
 
 
 class CurriculumTree(BaseModel):
-    domain: Domain
-    topics: list[Topic]
+    topic: Topic
+    subjects: list[Subject]
 
 
 # --- Exercise ---
 class Exercise(BaseModel):
     id: int
-    topic_id: int
+    subject_id: int
     title: str
     description: str | None = None
     initial_code: str = ""
@@ -48,7 +48,7 @@ class Exercise(BaseModel):
 
 
 class CreateExerciseRequest(BaseModel):
-    topic_id: int
+    subject_id: int
     title: str
     description: str = ""
     initial_code: str = ""
@@ -72,7 +72,7 @@ class AttemptResult(BaseModel):
 
 # --- Execution ---
 class ExecuteRequest(BaseModel):
-    domain_id: int
+    topic_id: int
     code: str
 
 
@@ -85,20 +85,61 @@ class ExecuteResult(BaseModel):
 
 
 # --- Chat ---
+class ChatContext(BaseModel):
+    type: str  # "exercise" | "knowledge"
+    exercise_id: int | None = None
+    exercise_title: str | None = None
+    exercise_description: str | None = None
+    card_id: int | None = None
+    card_title: str | None = None
+    card_content: str | None = None
+
+
 class ChatRequest(BaseModel):
-    domain_id: int
+    session_id: int | None = None
+    topic_id: int | None = None  # 하위 호환
     message: str
+    context: ChatContext | None = None
 
 
-# --- Topic CRUD ---
-class CreateTopicRequest(BaseModel):
+# --- Subject CRUD (was Topic CRUD) ---
+class CreateSubjectRequest(BaseModel):
     curriculum_id: int
     name: str
     description: str = ""
     parent_id: int | None = None
 
 
-class UpdateTopicRequest(BaseModel):
+class UpdateSubjectRequest(BaseModel):
     name: str | None = None
     description: str | None = None
     order_num: int | None = None
+
+
+# --- Topic CRUD (was Domain CRUD) ---
+class CreateTopicRequest(BaseModel):
+    name: str
+    description: str = ""
+    container_name: str = "dojang-generic"
+
+
+class UpdateTopicRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
+
+
+# --- Community ---
+class ShareCurriculumRequest(BaseModel):
+    curriculum_id: int
+    title: str
+    description: str = ""
+    subject: str = ""
+    tags: str = ""
+
+
+class ForkCurriculumRequest(BaseModel):
+    topic_id: int
+
+
+class UpvoteRequest(BaseModel):
+    voter_id: str = "anonymous"

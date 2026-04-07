@@ -19,11 +19,11 @@ async def get_db(settings: Settings = Depends(get_settings)):
 
 # --- Notebooks ---
 
-@router.get("/domains/{domain_id}/notebooks")
-async def list_notebooks(domain_id: int, db: aiosqlite.Connection = Depends(get_db)):
+@router.get("/topics/{topic_id}/notebooks")
+async def list_notebooks(topic_id: int, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "SELECT * FROM notebooks WHERE domain_id = ? ORDER BY is_default DESC, id",
-        (domain_id,),
+        "SELECT * FROM notebooks WHERE topic_id = ? ORDER BY is_default DESC, id",
+        (topic_id,),
     )
     return [dict(r) for r in await cursor.fetchall()]
 
@@ -33,11 +33,11 @@ class CreateNotebookRequest(BaseModel):
     description: str = ""
 
 
-@router.post("/domains/{domain_id}/notebooks")
-async def create_notebook(domain_id: int, req: CreateNotebookRequest, db: aiosqlite.Connection = Depends(get_db)):
+@router.post("/topics/{topic_id}/notebooks")
+async def create_notebook(topic_id: int, req: CreateNotebookRequest, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "INSERT INTO notebooks (domain_id, name, description) VALUES (?, ?, ?)",
-        (domain_id, req.name, req.description),
+        "INSERT INTO notebooks (topic_id, name, description) VALUES (?, ?, ?)",
+        (topic_id, req.name, req.description),
     )
     await db.commit()
     return {"id": cursor.lastrowid, "name": req.name}
@@ -61,8 +61,8 @@ async def delete_notebook(notebook_id: int, db: aiosqlite.Connection = Depends(g
 
 class CreateKnowledgeRequest(BaseModel):
     notebook_id: int | None = None
-    domain_id: int | None = None
     topic_id: int | None = None
+    subject_id: int | None = None
     title: str
     content: str = ""
     tags: str = ""
@@ -80,7 +80,7 @@ async def list_cards_in_notebook(
     q: str | None = None,
     db: aiosqlite.Connection = Depends(get_db),
 ):
-    query = "SELECT k.*, d.name as domain_name FROM knowledge k LEFT JOIN domains d ON k.domain_id = d.id WHERE k.notebook_id = ?"
+    query = "SELECT k.*, t.name as topic_name FROM knowledge k LEFT JOIN topics t ON k.topic_id = t.id WHERE k.notebook_id = ?"
     params: list = [notebook_id]
     if q:
         query += " AND (k.title LIKE ? OR k.content LIKE ? OR k.tags LIKE ?)"
@@ -92,16 +92,16 @@ async def list_cards_in_notebook(
 
 @router.get("/knowledge")
 async def list_knowledge(
-    domain_id: int | None = None,
+    topic_id: int | None = None,
     q: str | None = None,
     db: aiosqlite.Connection = Depends(get_db),
 ):
-    query = "SELECT k.*, d.name as domain_name, n.name as notebook_name FROM knowledge k LEFT JOIN domains d ON k.domain_id = d.id LEFT JOIN notebooks n ON k.notebook_id = n.id"
+    query = "SELECT k.*, t.name as topic_name, n.name as notebook_name FROM knowledge k LEFT JOIN topics t ON k.topic_id = t.id LEFT JOIN notebooks n ON k.notebook_id = n.id"
     params: list = []
     conditions = []
-    if domain_id:
-        conditions.append("k.domain_id = ?")
-        params.append(domain_id)
+    if topic_id:
+        conditions.append("k.topic_id = ?")
+        params.append(topic_id)
     if q:
         conditions.append("(k.title LIKE ? OR k.content LIKE ? OR k.tags LIKE ?)")
         params.extend([f"%{q}%", f"%{q}%", f"%{q}%"])
@@ -115,7 +115,7 @@ async def list_knowledge(
 @router.get("/knowledge/{knowledge_id}")
 async def get_knowledge(knowledge_id: int, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "SELECT k.*, d.name as domain_name, n.name as notebook_name FROM knowledge k LEFT JOIN domains d ON k.domain_id = d.id LEFT JOIN notebooks n ON k.notebook_id = n.id WHERE k.id = ?",
+        "SELECT k.*, t.name as topic_name, n.name as notebook_name FROM knowledge k LEFT JOIN topics t ON k.topic_id = t.id LEFT JOIN notebooks n ON k.notebook_id = n.id WHERE k.id = ?",
         (knowledge_id,),
     )
     row = await cursor.fetchone()
@@ -127,8 +127,8 @@ async def get_knowledge(knowledge_id: int, db: aiosqlite.Connection = Depends(ge
 @router.post("/knowledge")
 async def create_knowledge(req: CreateKnowledgeRequest, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "INSERT INTO knowledge (notebook_id, domain_id, topic_id, title, content, tags) VALUES (?, ?, ?, ?, ?, ?)",
-        (req.notebook_id, req.domain_id, req.topic_id, req.title, req.content, req.tags),
+        "INSERT INTO knowledge (notebook_id, topic_id, subject_id, title, content, tags) VALUES (?, ?, ?, ?, ?, ?)",
+        (req.notebook_id, req.topic_id, req.subject_id, req.title, req.content, req.tags),
     )
     await db.commit()
     return {"id": cursor.lastrowid, "title": req.title}

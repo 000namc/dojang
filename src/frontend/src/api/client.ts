@@ -1,6 +1,6 @@
 import axios from "axios";
 import type {
-  Domain,
+  Topic,
   CurriculumTree,
   Exercise,
   ExecuteResult,
@@ -11,27 +11,28 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "",
 });
 
-export async function getDomains(): Promise<Domain[]> {
-  const { data } = await api.get("/api/domains");
+export async function getTopics(): Promise<Topic[]> {
+  const { data } = await api.get("/api/topics");
   return data;
 }
 
 // Curricula
 export interface Curriculum {
   id: number;
-  domain_id: number;
+  topic_id: number;
   name: string;
   description: string;
   is_default: number;
+  session_id: number | null;
 }
 
-export async function listCurricula(domainId: number): Promise<Curriculum[]> {
-  const { data } = await api.get(`/api/domains/${domainId}/curricula`);
+export async function listCurricula(topicId: number): Promise<Curriculum[]> {
+  const { data } = await api.get(`/api/topics/${topicId}/curricula`);
   return data;
 }
 
-export async function createCurriculum(domainId: number, name: string, description = ""): Promise<{ id: number }> {
-  const { data } = await api.post(`/api/domains/${domainId}/curricula`, { name, description });
+export async function createCurriculum(topicId: number, name: string, description = ""): Promise<{ id: number }> {
+  const { data } = await api.post(`/api/topics/${topicId}/curricula`, { name, description });
   return data;
 }
 
@@ -44,8 +45,8 @@ export async function getCurriculumTree(curriculumId: number): Promise<Curriculu
   return data;
 }
 
-export async function deleteTopic(topicId: number): Promise<void> {
-  await api.delete(`/api/topics/${topicId}`);
+export async function deleteSubject(subjectId: number): Promise<void> {
+  await api.delete(`/api/subjects/${subjectId}`);
 }
 
 // Checkpoints
@@ -79,12 +80,16 @@ export async function getExercise(exerciseId: number): Promise<Exercise> {
   return data;
 }
 
+export async function deleteExercise(exerciseId: number): Promise<void> {
+  await api.delete(`/api/exercises/${exerciseId}`);
+}
+
 export async function executeCode(
-  domainId: number,
+  topicId: number,
   code: string,
 ): Promise<ExecuteResult> {
   const { data } = await api.post("/api/execute", {
-    domain_id: domainId,
+    topic_id: topicId,
     code,
   });
   return data;
@@ -108,19 +113,19 @@ export async function checkNotify(since: number): Promise<{ event: string | null
 // Notebooks
 export interface Notebook {
   id: number;
-  domain_id: number;
+  topic_id: number;
   name: string;
   description: string;
   is_default: number;
 }
 
-export async function listNotebooks(domainId: number): Promise<Notebook[]> {
-  const { data } = await api.get(`/api/domains/${domainId}/notebooks`);
+export async function listNotebooks(topicId: number): Promise<Notebook[]> {
+  const { data } = await api.get(`/api/topics/${topicId}/notebooks`);
   return data;
 }
 
-export async function createNotebook(domainId: number, name: string): Promise<{ id: number }> {
-  const { data } = await api.post(`/api/domains/${domainId}/notebooks`, { name });
+export async function createNotebook(topicId: number, name: string): Promise<{ id: number }> {
+  const { data } = await api.post(`/api/topics/${topicId}/notebooks`, { name });
   return data;
 }
 
@@ -132,9 +137,9 @@ export async function deleteNotebook(notebookId: number): Promise<void> {
 export interface KnowledgeCard {
   id: number;
   notebook_id: number | null;
-  domain_id: number | null;
   topic_id: number | null;
-  domain_name: string | null;
+  subject_id: number | null;
+  topic_name: string | null;
   notebook_name: string | null;
   title: string;
   content: string;
@@ -148,8 +153,8 @@ export async function listCardsInNotebook(notebookId: number, q?: string): Promi
   return data;
 }
 
-export async function listKnowledge(domainId?: number, q?: string): Promise<KnowledgeCard[]> {
-  const { data } = await api.get("/api/knowledge", { params: { domain_id: domainId, q } });
+export async function listKnowledge(topicId?: number, q?: string): Promise<KnowledgeCard[]> {
+  const { data } = await api.get("/api/knowledge", { params: { topic_id: topicId, q } });
   return data;
 }
 
@@ -158,7 +163,7 @@ export async function getKnowledge(id: number): Promise<KnowledgeCard> {
   return data;
 }
 
-export async function createKnowledge(card: { notebook_id?: number | null; domain_id?: number; topic_id?: number | null; title: string; content?: string; tags?: string }): Promise<{ id: number }> {
+export async function createKnowledge(card: { notebook_id?: number | null; topic_id?: number; subject_id?: number | null; title: string; content?: string; tags?: string }): Promise<{ id: number }> {
   const { data } = await api.post("/api/knowledge", card);
   return data;
 }
@@ -169,4 +174,45 @@ export async function updateKnowledge(id: number, updates: { title?: string; con
 
 export async function deleteKnowledge(id: number): Promise<void> {
   await api.delete(`/api/knowledge/${id}`);
+}
+
+// Topic CRUD
+export async function createTopic(name: string, description?: string): Promise<{ id: number }> {
+  const { data } = await api.post("/api/topics", { name, description: description || "", container_name: `dojang-${name.toLowerCase()}` });
+  return data;
+}
+export async function updateTopic(id: number, updates: { name?: string; description?: string }): Promise<void> {
+  await api.put(`/api/topics/${id}`, updates);
+}
+export async function deleteTopic(id: number): Promise<void> {
+  await api.delete(`/api/topics/${id}`);
+}
+export async function getTopicStats(id: number): Promise<{ curriculum_count: number; subject_count: number; exercise_count: number }> {
+  const { data } = await api.get(`/api/topics/${id}/stats`);
+  return data;
+}
+
+// Community
+export async function shareCurriculum(req: { curriculum_id: number; title: string; description?: string; subject?: string; tags?: string }): Promise<{ id: number }> {
+  const { data } = await api.post("/api/community/share", req);
+  return data;
+}
+export async function listCommunity(params: { sort?: string; q?: string; page?: number }): Promise<{ items: any[]; total: number; page: number }> {
+  const { data } = await api.get("/api/community", { params });
+  return data;
+}
+export async function upvoteCommunity(id: number, voterId?: string): Promise<{ upvoted: boolean; upvotes: number }> {
+  const vid = voterId || getVoterId();
+  const { data } = await api.post(`/api/community/${id}/upvote`, { voter_id: vid });
+  return data;
+}
+export async function forkCommunity(id: number, topicId: number): Promise<{ curriculum_id: number }> {
+  const { data } = await api.post(`/api/community/${id}/fork`, { topic_id: topicId });
+  return data;
+}
+
+function getVoterId(): string {
+  let id = localStorage.getItem("dojang_voter_id");
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem("dojang_voter_id", id); }
+  return id;
 }

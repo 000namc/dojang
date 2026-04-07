@@ -5,9 +5,9 @@ import { useStore } from "../stores/store";
 
 export default function KnowledgeList() {
   const {
-    domains, currentDomain, notebooks, currentNotebookId,
+    topics, currentTopic, notebooks, currentNotebookId,
     knowledgeCards, selectedCardId,
-    selectDomain, selectNotebook, createNotebook, deleteNotebook,
+    selectTopic, selectNotebook, createNotebook, deleteNotebook,
     selectCard, createCard,
   } = useStore();
   const [search, setSearch] = useState("");
@@ -33,14 +33,14 @@ export default function KnowledgeList() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Domain + Notebook selectors */}
+      {/* Topic + Notebook selectors */}
       <div className="border-b dark:border-gray-700 p-3 space-y-2">
         <select
-          value={currentDomain?.id ?? ""}
-          onChange={(e) => selectDomain(Number(e.target.value))}
+          value={currentTopic?.id ?? ""}
+          onChange={(e) => selectTopic(Number(e.target.value))}
           className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 dark:text-gray-100 px-3 py-2 text-sm font-medium focus:border-primary-500 focus:outline-none"
         >
-          {domains.map((d) => (
+          {topics.map((d) => (
             <option key={d.id} value={d.id}>{d.name}</option>
           ))}
         </select>

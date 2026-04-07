@@ -8,7 +8,7 @@ import aiosqlite
 
 from src.backend.config import Settings, get_settings
 from src.backend.database import get_connection
-from src.backend.models import CreateTopicRequest, UpdateTopicRequest
+from src.backend.models import CreateSubjectRequest, UpdateSubjectRequest
 
 router = APIRouter(prefix="/api", tags=["curriculum"])
 
@@ -23,11 +23,11 @@ async def get_db(settings: Settings = Depends(get_settings)):
 
 # --- Curricula CRUD ---
 
-@router.get("/domains/{domain_id}/curricula")
-async def list_curricula(domain_id: int, db: aiosqlite.Connection = Depends(get_db)):
+@router.get("/topics/{topic_id}/curricula")
+async def list_curricula(topic_id: int, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "SELECT id, domain_id, name, description, is_default FROM curricula WHERE domain_id = ? ORDER BY is_default DESC, id",
-        (domain_id,),
+        "SELECT id, topic_id, name, description, is_default, session_id FROM curricula WHERE topic_id = ? ORDER BY is_default DESC, id",
+        (topic_id,),
     )
     return [dict(r) for r in await cursor.fetchall()]
 
@@ -37,13 +37,13 @@ class CreateCurriculumRequest(BaseModel):
     description: str = ""
 
 
-@router.post("/domains/{domain_id}/curricula")
+@router.post("/topics/{topic_id}/curricula")
 async def create_curriculum(
-    domain_id: int, req: CreateCurriculumRequest, db: aiosqlite.Connection = Depends(get_db)
+    topic_id: int, req: CreateCurriculumRequest, db: aiosqlite.Connection = Depends(get_db)
 ):
     cursor = await db.execute(
-        "INSERT INTO curricula (domain_id, name, description) VALUES (?, ?, ?)",
-        (domain_id, req.name, req.description),
+        "INSERT INTO curricula (topic_id, name, description) VALUES (?, ?, ?)",
+        (topic_id, req.name, req.description),
     )
     await db.commit()
     return {"id": cursor.lastrowid, "name": req.name}
@@ -57,12 +57,17 @@ async def delete_curriculum(curriculum_id: int, db: aiosqlite.Connection = Depen
         raise HTTPException(404, "Curriculum not found")
     if row["is_default"]:
         raise HTTPException(400, "기본 커리큘럼은 삭제할 수 없습니다")
-    # Delete exercises → topics → curriculum
+    # Delete exercises → knowledge → checkpoints → subjects → curriculum
     await db.execute(
-        "DELETE FROM exercises WHERE topic_id IN (SELECT id FROM topics WHERE curriculum_id = ?)",
+        "DELETE FROM exercises WHERE subject_id IN (SELECT id FROM subjects WHERE curriculum_id = ?)",
         (curriculum_id,),
     )
-    await db.execute("DELETE FROM topics WHERE curriculum_id = ?", (curriculum_id,))
+    await db.execute(
+        "DELETE FROM knowledge WHERE subject_id IN (SELECT id FROM subjects WHERE curriculum_id = ?)",
+        (curriculum_id,),
+    )
+    await db.execute("DELETE FROM checkpoints WHERE curriculum_id = ?", (curriculum_id,))
+    await db.execute("DELETE FROM subjects WHERE curriculum_id = ?", (curriculum_id,))
     await db.execute("DELETE FROM curricula WHERE id = ?", (curriculum_id,))
     await db.commit()
     return {"ok": True}
@@ -72,62 +77,62 @@ async def delete_curriculum(curriculum_id: int, db: aiosqlite.Connection = Depen
 
 @router.get("/curricula/{curriculum_id}/tree")
 async def get_curriculum_tree(curriculum_id: int, db: aiosqlite.Connection = Depends(get_db)):
-    # Curriculum + domain
+    # Curriculum + topic
     cursor = await db.execute(
-        "SELECT c.*, d.name as domain_name, d.container_name "
-        "FROM curricula c JOIN domains d ON c.domain_id = d.id WHERE c.id = ?",
+        "SELECT c.*, t.name as topic_name, t.container_name "
+        "FROM curricula c JOIN topics t ON c.topic_id = t.id WHERE c.id = ?",
         (curriculum_id,),
     )
     cur = await cursor.fetchone()
     if not cur:
         raise HTTPException(404, "Curriculum not found")
 
-    # Topics
+    # Subjects
     cursor = await db.execute(
-        "SELECT id, curriculum_id, name, description, order_num, parent_id FROM topics "
+        "SELECT id, curriculum_id, name, description, order_num, parent_id FROM subjects "
         "WHERE curriculum_id = ? ORDER BY order_num",
         (curriculum_id,),
     )
-    topics = [dict(r) for r in await cursor.fetchall()]
+    subjects = [dict(r) for r in await cursor.fetchall()]
 
-    # Exercises per topic
-    topic_ids = [t["id"] for t in topics]
-    exercises_by_topic: dict[int, list] = {tid: [] for tid in topic_ids}
-    if topic_ids:
-        placeholders = ",".join("?" * len(topic_ids))
+    # Exercises per subject
+    subject_ids = [s["id"] for s in subjects]
+    exercises_by_subject: dict[int, list] = {sid: [] for sid in subject_ids}
+    if subject_ids:
+        placeholders = ",".join("?" * len(subject_ids))
         cursor = await db.execute(
-            f"SELECT id, topic_id, title, difficulty FROM exercises WHERE topic_id IN ({placeholders})",
-            topic_ids,
+            f"SELECT id, subject_id, title, difficulty FROM exercises WHERE subject_id IN ({placeholders})",
+            subject_ids,
         )
         for ex in await cursor.fetchall():
-            exercises_by_topic[ex["topic_id"]].append(dict(ex))
+            exercises_by_subject[ex["subject_id"]].append(dict(ex))
 
-    # Knowledge cards per topic
-    knowledge_by_topic: dict[int, list] = {tid: [] for tid in topic_ids}
-    if topic_ids:
+    # Knowledge cards per subject
+    knowledge_by_subject: dict[int, list] = {sid: [] for sid in subject_ids}
+    if subject_ids:
         cursor = await db.execute(
-            f"SELECT id, topic_id, title, tags, order_num FROM knowledge WHERE topic_id IN ({placeholders})",
-            topic_ids,
+            f"SELECT id, subject_id, title, tags, order_num FROM knowledge WHERE subject_id IN ({placeholders})",
+            subject_ids,
         )
         for k in await cursor.fetchall():
-            knowledge_by_topic[k["topic_id"]].append(dict(k))
+            knowledge_by_subject[k["subject_id"]].append(dict(k))
 
     # Completed exercise IDs
     completed_ids: set[int] = set()
-    if topic_ids:
+    if subject_ids:
         cursor = await db.execute(
             f"SELECT DISTINCT exercise_id FROM attempts WHERE is_correct = 1 "
-            f"AND exercise_id IN (SELECT id FROM exercises WHERE topic_id IN ({placeholders}))",
-            topic_ids,
+            f"AND exercise_id IN (SELECT id FROM exercises WHERE subject_id IN ({placeholders}))",
+            subject_ids,
         )
         completed_ids = {r["exercise_id"] for r in await cursor.fetchall()}
 
     def build_tree(parent_id: int | None) -> list:
-        children = [t for t in topics if t["parent_id"] == parent_id]
+        children = [s for s in subjects if s["parent_id"] == parent_id]
         result = []
-        for t in children:
-            exs = exercises_by_topic.get(t["id"], [])
-            cards = knowledge_by_topic.get(t["id"], [])
+        for s in children:
+            exs = exercises_by_subject.get(s["id"], [])
+            cards = knowledge_by_subject.get(s["id"], [])
             ex_summaries = [
                 {
                     "id": e["id"],
@@ -154,8 +159,8 @@ async def get_curriculum_tree(curriculum_id: int, db: aiosqlite.Connection = Dep
             done = sum(1 for e in ex_summaries if e["is_completed"])
             result.append(
                 {
-                    **t,
-                    "children": build_tree(t["id"]),
+                    **s,
+                    "children": build_tree(s["id"]),
                     "exercises": ex_summaries,
                     "knowledge": card_summaries,
                     "items": items,
@@ -166,52 +171,52 @@ async def get_curriculum_tree(curriculum_id: int, db: aiosqlite.Connection = Dep
 
     return {
         "curriculum": dict(cur),
-        "topics": build_tree(None),
+        "subjects": build_tree(None),
     }
 
 
-# --- Topics ---
+# --- Subjects ---
 
-@router.post("/topics")
-async def create_topic(req: CreateTopicRequest, db: aiosqlite.Connection = Depends(get_db)):
+@router.post("/subjects")
+async def create_subject(req: CreateSubjectRequest, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "SELECT COALESCE(MAX(order_num), -1) + 1 as next_order FROM topics WHERE curriculum_id = ? AND parent_id IS ?",
+        "SELECT COALESCE(MAX(order_num), -1) + 1 as next_order FROM subjects WHERE curriculum_id = ? AND parent_id IS ?",
         (req.curriculum_id, req.parent_id),
     )
     row = await cursor.fetchone()
     order_num = row["next_order"]
 
     cursor = await db.execute(
-        "INSERT INTO topics (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO subjects (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
         (req.curriculum_id, req.name, req.description, order_num, req.parent_id),
     )
     await db.commit()
     return {"id": cursor.lastrowid, "name": req.name, "order_num": order_num}
 
 
-@router.delete("/topics/{topic_id}")
-async def delete_topic(topic_id: int, db: aiosqlite.Connection = Depends(get_db)):
-    # Recursively collect all child topic IDs
-    all_ids = [topic_id]
-    queue = [topic_id]
+@router.delete("/subjects/{subject_id}")
+async def delete_subject(subject_id: int, db: aiosqlite.Connection = Depends(get_db)):
+    # Recursively collect all child subject IDs
+    all_ids = [subject_id]
+    queue = [subject_id]
     while queue:
         parent = queue.pop()
-        cursor = await db.execute("SELECT id FROM topics WHERE parent_id = ?", (parent,))
+        cursor = await db.execute("SELECT id FROM subjects WHERE parent_id = ?", (parent,))
         for row in await cursor.fetchall():
             all_ids.append(row["id"])
             queue.append(row["id"])
     placeholders = ",".join("?" * len(all_ids))
-    await db.execute(f"DELETE FROM knowledge WHERE topic_id IN ({placeholders})", all_ids)
-    await db.execute(f"DELETE FROM exercises WHERE topic_id IN ({placeholders})", all_ids)
-    await db.execute(f"DELETE FROM topics WHERE id IN ({placeholders})", all_ids)
+    await db.execute(f"DELETE FROM knowledge WHERE subject_id IN ({placeholders})", all_ids)
+    await db.execute(f"DELETE FROM exercises WHERE subject_id IN ({placeholders})", all_ids)
+    await db.execute(f"DELETE FROM subjects WHERE id IN ({placeholders})", all_ids)
     await db.commit()
     return {"ok": True}
 
 
-@router.put("/topics/{topic_id}")
-async def update_topic(
-    topic_id: int,
-    req: UpdateTopicRequest,
+@router.put("/subjects/{subject_id}")
+async def update_subject(
+    subject_id: int,
+    req: UpdateSubjectRequest,
     db: aiosqlite.Connection = Depends(get_db),
 ):
     updates = []
@@ -229,9 +234,9 @@ async def update_topic(
     if not updates:
         raise HTTPException(400, "No fields to update")
 
-    values.append(topic_id)
+    values.append(subject_id)
     await db.execute(
-        f"UPDATE topics SET {', '.join(updates)} WHERE id = ?", values
+        f"UPDATE subjects SET {', '.join(updates)} WHERE id = ?", values
     )
     await db.commit()
     return {"ok": True}
@@ -254,20 +259,20 @@ async def list_checkpoints(curriculum_id: int, db: aiosqlite.Connection = Depend
 
 @router.post("/curricula/{curriculum_id}/checkpoints")
 async def create_checkpoint(curriculum_id: int, req: CreateCheckpointRequest, db: aiosqlite.Connection = Depends(get_db)):
-    cursor = await db.execute("SELECT * FROM topics WHERE curriculum_id = ?", (curriculum_id,))
-    topics = [dict(r) for r in await cursor.fetchall()]
+    cursor = await db.execute("SELECT * FROM subjects WHERE curriculum_id = ?", (curriculum_id,))
+    subjects = [dict(r) for r in await cursor.fetchall()]
 
-    topic_ids = [t["id"] for t in topics]
+    subject_ids = [s["id"] for s in subjects]
     exercises = []
     knowledge = []
-    if topic_ids:
-        ph = ",".join("?" * len(topic_ids))
-        cursor = await db.execute(f"SELECT * FROM exercises WHERE topic_id IN ({ph})", topic_ids)
+    if subject_ids:
+        ph = ",".join("?" * len(subject_ids))
+        cursor = await db.execute(f"SELECT * FROM exercises WHERE subject_id IN ({ph})", subject_ids)
         exercises = [dict(r) for r in await cursor.fetchall()]
-        cursor = await db.execute(f"SELECT * FROM knowledge WHERE topic_id IN ({ph})", topic_ids)
+        cursor = await db.execute(f"SELECT * FROM knowledge WHERE subject_id IN ({ph})", subject_ids)
         knowledge = [dict(r) for r in await cursor.fetchall()]
 
-    snapshot = json.dumps({"topics": topics, "exercises": exercises, "knowledge": knowledge}, ensure_ascii=False)
+    snapshot = json.dumps({"subjects": subjects, "exercises": exercises, "knowledge": knowledge}, ensure_ascii=False)
     name = req.name or datetime.now().strftime("%Y-%m-%d %H:%M")
 
     cursor = await db.execute(
@@ -289,41 +294,43 @@ async def restore_checkpoint(checkpoint_id: int, db: aiosqlite.Connection = Depe
     curriculum_id = cp["curriculum_id"]
 
     # Delete current data
-    cursor = await db.execute("SELECT id FROM topics WHERE curriculum_id = ?", (curriculum_id,))
-    old_topic_ids = [r["id"] for r in await cursor.fetchall()]
-    if old_topic_ids:
-        ph = ",".join("?" * len(old_topic_ids))
-        await db.execute(f"DELETE FROM knowledge WHERE topic_id IN ({ph})", old_topic_ids)
-        await db.execute(f"DELETE FROM exercises WHERE topic_id IN ({ph})", old_topic_ids)
-    await db.execute("DELETE FROM topics WHERE curriculum_id = ?", (curriculum_id,))
+    cursor = await db.execute("SELECT id FROM subjects WHERE curriculum_id = ?", (curriculum_id,))
+    old_subject_ids = [r["id"] for r in await cursor.fetchall()]
+    if old_subject_ids:
+        ph = ",".join("?" * len(old_subject_ids))
+        await db.execute(f"DELETE FROM knowledge WHERE subject_id IN ({ph})", old_subject_ids)
+        await db.execute(f"DELETE FROM exercises WHERE subject_id IN ({ph})", old_subject_ids)
+    await db.execute("DELETE FROM subjects WHERE curriculum_id = ?", (curriculum_id,))
 
     # Restore with ID mapping
+    # Support both old "topics" key and new "subjects" key for backwards compatibility
+    subjects_data = data.get("subjects") or data.get("topics", [])
     id_map: dict[int, int] = {}
-    for t in sorted(data["topics"], key=lambda x: x.get("order_num", 0)):
-        old_id = t["id"]
-        new_parent = id_map.get(t["parent_id"]) if t.get("parent_id") else None
+    for s in sorted(subjects_data, key=lambda x: x.get("order_num", 0)):
+        old_id = s["id"]
+        new_parent = id_map.get(s["parent_id"]) if s.get("parent_id") else None
         cursor = await db.execute(
-            "INSERT INTO topics (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
-            (curriculum_id, t["name"], t.get("description", ""), t.get("order_num", 0), new_parent),
+            "INSERT INTO subjects (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
+            (curriculum_id, s["name"], s.get("description", ""), s.get("order_num", 0), new_parent),
         )
         id_map[old_id] = cursor.lastrowid
 
     for ex in data["exercises"]:
-        new_topic_id = id_map.get(ex["topic_id"])
-        if not new_topic_id:
+        new_subject_id = id_map.get(ex.get("subject_id") or ex.get("topic_id"))
+        if not new_subject_id:
             continue
         await db.execute(
-            "INSERT INTO exercises (topic_id, title, description, initial_code, check_type, check_value, difficulty, created_by) "
+            "INSERT INTO exercises (subject_id, title, description, initial_code, check_type, check_value, difficulty, created_by) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (new_topic_id, ex["title"], ex.get("description", ""), ex.get("initial_code", ""),
+            (new_subject_id, ex["title"], ex.get("description", ""), ex.get("initial_code", ""),
              ex.get("check_type", "ai_check"), ex.get("check_value", ""), ex.get("difficulty", 1), ex.get("created_by", "system")),
         )
 
     for k in data["knowledge"]:
-        new_topic_id = id_map.get(k["topic_id"]) if k.get("topic_id") else None
+        new_subject_id = id_map.get(k.get("subject_id") or k.get("topic_id")) if (k.get("subject_id") or k.get("topic_id")) else None
         await db.execute(
-            "INSERT INTO knowledge (topic_id, domain_id, title, content, tags, order_num) VALUES (?, ?, ?, ?, ?, ?)",
-            (new_topic_id, k.get("domain_id"), k["title"], k.get("content", ""), k.get("tags", ""), k.get("order_num", 0)),
+            "INSERT INTO knowledge (subject_id, topic_id, title, content, tags, order_num) VALUES (?, ?, ?, ?, ?, ?)",
+            (new_subject_id, k.get("topic_id") or k.get("domain_id"), k["title"], k.get("content", ""), k.get("tags", ""), k.get("order_num", 0)),
         )
 
     await db.commit()

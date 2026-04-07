@@ -1,0 +1,288 @@
+{
+  "name": "Python 선형회귀",
+  "description": "Python과 scikit-learn으로 배우는 선형회귀",
+  "topics": [
+    {
+      "name": "Python 기초 복습",
+      "description": "변수, 리스트, 반복문 — 데이터 분석에 필요한 최소 문법",
+      "order": 1,
+      "knowledge": [
+        {
+          "title": "변수와 자료형",
+          "content": "Python의 기본 자료형:\n\n```python\nx = 42          # int\npi = 3.14       # float\nname = \"hello\"  # str\nis_ok = True    # bool\n```\n\n`type(x)`로 자료형을 확인할 수 있습니다.",
+          "tags": "기초,변수",
+          "order": 0
+        },
+        {
+          "title": "리스트와 반복문",
+          "content": "리스트는 여러 값을 순서대로 담는 자료구조입니다.\n\n```python\nnums = [1, 2, 3, 4, 5]\n\n# 반복\nfor n in nums:\n    print(n)\n\n# 리스트 컴프리헨션\nsquares = [n**2 for n in nums]\n```\n\n`len(nums)`, `sum(nums)`, `nums.append(6)` 등을 자주 씁니다.",
+          "tags": "기초,리스트",
+          "order": 1
+        }
+      ],
+      "exercises": [
+        {
+          "title": "리스트 평균 구하기",
+          "description": "리스트 `[10, 20, 30, 40, 50]`의 **평균**을 계산해서 출력하세요.\n\n출력: `30.0`",
+          "initial_code": "nums = [10, 20, 30, 40, 50]\n",
+          "check_type": "output_match",
+          "check_value": "30.0",
+          "difficulty": 1
+        },
+        {
+          "title": "짝수만 필터링",
+          "description": "`[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]`에서 **짝수만** 담은 리스트를 출력하세요.\n\n출력: `[2, 4, 6, 8, 10]`",
+          "initial_code": "nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]\n",
+          "check_type": "output_match",
+          "check_value": "[2, 4, 6, 8, 10]",
+          "difficulty": 1
+        },
+        {
+          "title": "CSV 파일 읽기",
+          "description": "`house_prices.csv` 파일의 **첫 3줄**(헤더 포함)을 읽어서 출력하세요.\n\nHint: `open()`과 `readline()` 또는 `csv` 모듈을 사용하세요.",
+          "initial_code": "",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "NumPy 기초",
+      "description": "배열 연산과 벡터화 — 데이터 처리의 기본 도구",
+      "order": 2,
+      "knowledge": [
+        {
+          "title": "NumPy 배열",
+          "content": "NumPy의 `ndarray`는 같은 타입의 값을 담는 다차원 배열입니다.\n\n```python\nimport numpy as np\n\na = np.array([1, 2, 3])       # 1차원\nb = np.array([[1,2],[3,4]])    # 2차원 (2x2)\n\nprint(a.shape)   # (3,)\nprint(b.shape)   # (2, 2)\n```\n\n리스트와 달리 **원소별 연산**이 됩니다:\n```python\na * 2        # array([2, 4, 6])\na + a        # array([2, 4, 6])\n```",
+          "tags": "numpy,배열",
+          "order": 0
+        },
+        {
+          "title": "통계 함수",
+          "content": "NumPy의 통계 함수들:\n\n```python\nimport numpy as np\ndata = np.array([10, 20, 30, 40, 50])\n\nnp.mean(data)    # 평균: 30.0\nnp.std(data)     # 표준편차: 14.14...\nnp.min(data)     # 최솟값: 10\nnp.max(data)     # 최댓값: 50\nnp.median(data)  # 중앙값: 30.0\n```\n\n2차원 배열에서는 `axis` 파라미터로 행/열 방향을 지정합니다.",
+          "tags": "numpy,통계",
+          "order": 1
+        }
+      ],
+      "exercises": [
+        {
+          "title": "배열 만들기와 연산",
+          "description": "1부터 5까지 담은 NumPy 배열을 만들고, 각 원소를 **제곱**해서 출력하세요.\n\n출력: `[ 1  4  9 16 25]`",
+          "initial_code": "import numpy as np\n",
+          "check_type": "output_match",
+          "check_value": "[ 1  4  9 16 25]",
+          "difficulty": 1
+        },
+        {
+          "title": "평균과 표준편차",
+          "description": "`house_prices.csv`에서 `price` 열을 NumPy 배열로 읽고, **평균**과 **표준편차**를 소수점 첫째 자리까지 출력하세요.\n\n출력 형식:\n```\nmean: XXXX.X\nstd: XXX.X\n```",
+          "initial_code": "import numpy as np\nimport csv\n",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 2
+        },
+        {
+          "title": "정규화 (Min-Max Scaling)",
+          "description": "배열 `[10, 20, 30, 40, 50]`을 **0~1 범위로 정규화**해서 출력하세요.\n\n공식: `(x - min) / (max - min)`\n\n출력: `[0.   0.25 0.5  0.75 1.  ]`",
+          "initial_code": "import numpy as np\ndata = np.array([10, 20, 30, 40, 50])\n",
+          "check_type": "output_match",
+          "check_value": "[0.   0.25 0.5  0.75 1.  ]",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "pandas로 데이터 다루기",
+      "description": "DataFrame으로 CSV 로드, 탐색, 전처리",
+      "order": 3,
+      "knowledge": [
+        {
+          "title": "DataFrame 기초",
+          "content": "pandas의 DataFrame은 표 형태의 데이터를 다루는 핵심 구조입니다.\n\n```python\nimport pandas as pd\n\ndf = pd.read_csv('data.csv')\n\ndf.head()        # 처음 5행\ndf.shape         # (행 수, 열 수)\ndf.describe()    # 기초 통계\ndf.info()        # 열 정보, 타입, 결측\n```\n\n열 접근:\n```python\ndf['price']          # Series\ndf[['area','price']] # DataFrame\n```",
+          "tags": "pandas,dataframe",
+          "order": 0
+        },
+        {
+          "title": "데이터 전처리",
+          "content": "실전 데이터에는 전처리가 필수입니다.\n\n```python\n# 결측치 확인/처리\ndf.isnull().sum()\ndf.dropna()              # 결측 행 제거\ndf.fillna(df.mean())     # 평균으로 대체\n\n# 열 선택\nX = df[['area', 'rooms']]\ny = df['price']\n\n# 특성(feature)과 타겟(target) 분리\n# X: 입력 변수 (독립변수)\n# y: 예측할 값 (종속변수)\n```",
+          "tags": "pandas,전처리",
+          "order": 1
+        }
+      ],
+      "exercises": [
+        {
+          "title": "CSV 로드와 탐색",
+          "description": "`house_prices.csv`를 pandas로 읽고 **행 수**와 **열 수**를 출력하세요.\n\n출력 형식:\n```\nrows: 50\ncols: 4\n```",
+          "initial_code": "import pandas as pd\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "output_match",
+          "check_value": "rows: 50\ncols: 4",
+          "difficulty": 1
+        },
+        {
+          "title": "기초 통계 확인",
+          "description": "`house_prices.csv`의 `price` 열에서 **최솟값**, **최댓값**, **평균**을 구해 출력하세요.\n\n출력 형식:\n```\nmin: 최솟값\nmax: 최댓값\nmean: 평균\n```\n각 값은 소수점 첫째 자리까지 출력하세요.",
+          "initial_code": "import pandas as pd\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 1
+        },
+        {
+          "title": "특성과 타겟 분리",
+          "description": "`house_prices.csv`에서:\n- **X**: `area`, `rooms`, `age` 열 (특성)\n- **y**: `price` 열 (타겟)\n\n으로 분리하고, X의 shape과 y의 shape을 출력하세요.\n\n출력 형식:\n```\nX: (50, 3)\ny: (50,)\n```",
+          "initial_code": "import pandas as pd\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "output_match",
+          "check_value": "X: (50, 3)\ny: (50,)",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "선형회귀 이론",
+      "description": "선형회귀의 수학적 원리와 직관적 이해",
+      "order": 4,
+      "knowledge": [
+        {
+          "title": "선형회귀란?",
+          "content": "선형회귀(Linear Regression)는 입력(X)과 출력(y) 사이의 **선형 관계**를 찾는 모델입니다.\n\n**단순 선형회귀** (변수 1개):\n```\ny = w·x + b\n```\n- `w`: 기울기 (weight, 가중치)\n- `b`: 절편 (bias, 편향)\n\n**다중 선형회귀** (변수 여러 개):\n```\ny = w₁·x₁ + w₂·x₂ + ... + wₙ·xₙ + b\n```\n\n예: 집 가격 = 30×면적 + 500×방수 - 10×연식 + 절편",
+          "tags": "이론,선형회귀",
+          "order": 0
+        },
+        {
+          "title": "손실 함수 (MSE)",
+          "content": "모델이 얼마나 **잘못** 예측하는지 측정하는 함수입니다.\n\n**MSE (Mean Squared Error)**:\n```\nMSE = (1/n) × Σ(yᵢ - ŷᵢ)²\n```\n- `yᵢ`: 실제 값\n- `ŷᵢ`: 예측 값\n- 차이를 제곱해서 평균 → 항상 양수\n\n학습 = MSE를 **최소화**하는 w, b 찾기\n\n```python\nimport numpy as np\nmse = np.mean((y_true - y_pred) ** 2)\n```",
+          "tags": "이론,MSE,손실함수",
+          "order": 1
+        },
+        {
+          "title": "경사하강법 직관",
+          "content": "경사하강법(Gradient Descent)은 손실을 줄이는 방향으로 w, b를 조금씩 업데이트하는 방법입니다.\n\n1. 임의의 w, b로 시작\n2. 현재 손실(MSE) 계산\n3. 손실이 줄어드는 방향으로 w, b를 조정\n4. 2-3을 반복\n\n**학습률(learning rate)**: 한 번에 얼마나 움직일지\n- 너무 크면: 발산 (값이 튐)\n- 너무 작으면: 수렴이 느림\n- 보통 0.01~0.001 사용",
+          "tags": "이론,경사하강법",
+          "order": 2
+        }
+      ],
+      "exercises": [
+        {
+          "title": "MSE 직접 계산",
+          "description": "실제값 `[3, 5, 7, 9]`와 예측값 `[2.5, 5.5, 6.5, 9.5]`의 **MSE**를 계산해서 출력하세요.\n\n공식: `MSE = mean((y_true - y_pred)²)`\n\n출력: `0.25`",
+          "initial_code": "import numpy as np\n\ny_true = np.array([3, 5, 7, 9])\ny_pred = np.array([2.5, 5.5, 6.5, 9.5])\n",
+          "check_type": "output_match",
+          "check_value": "0.25",
+          "difficulty": 1
+        },
+        {
+          "title": "단순 선형회귀 수동 구현",
+          "description": "NumPy만 사용해서 데이터 `X = [1,2,3,4,5]`, `y = [2,4,5,4,5]`에 대한 **최소제곱법** 선형회귀를 구현하세요.\n\n공식:\n- `w = Σ(xᵢ-x̄)(yᵢ-ȳ) / Σ(xᵢ-x̄)²`\n- `b = ȳ - w·x̄`\n\n출력 형식:\n```\nw: 값(소수점 둘째자리)\nb: 값(소수점 둘째자리)\n```",
+          "initial_code": "import numpy as np\n\nX = np.array([1, 2, 3, 4, 5], dtype=float)\ny = np.array([2, 4, 5, 4, 5], dtype=float)\n",
+          "check_type": "output_match",
+          "check_value": "w: 0.60\nb: 2.20",
+          "difficulty": 3
+        }
+      ]
+    },
+    {
+      "name": "scikit-learn 선형회귀",
+      "description": "scikit-learn으로 모델 학습, 예측, 평가하기",
+      "order": 5,
+      "knowledge": [
+        {
+          "title": "scikit-learn 워크플로",
+          "content": "scikit-learn은 **일관된 API**를 제공합니다:\n\n```python\nfrom sklearn.linear_model import LinearRegression\nfrom sklearn.model_selection import train_test_split\n\n# 1. 데이터 분리\nX_train, X_test, y_train, y_test = train_test_split(\n    X, y, test_size=0.2, random_state=42\n)\n\n# 2. 모델 생성 & 학습\nmodel = LinearRegression()\nmodel.fit(X_train, y_train)\n\n# 3. 예측\ny_pred = model.predict(X_test)\n\n# 4. 평가\nfrom sklearn.metrics import mean_squared_error, r2_score\nprint(mean_squared_error(y_test, y_pred))\nprint(r2_score(y_test, y_pred))\n```",
+          "tags": "sklearn,워크플로",
+          "order": 0
+        },
+        {
+          "title": "모델 해석",
+          "content": "학습된 모델의 계수를 확인할 수 있습니다:\n\n```python\nmodel.coef_        # 가중치 (각 특성의 영향력)\nmodel.intercept_   # 절편\n```\n\n예: 집 가격 모델이라면:\n- `coef_[0] = 30` → 면적 1㎡ 증가 시 가격 30만원 상승\n- `coef_[1] = 500` → 방 1개 추가 시 500만원 상승\n- `coef_[2] = -10` → 1년 오래될수록 10만원 하락",
+          "tags": "sklearn,해석",
+          "order": 1
+        },
+        {
+          "title": "R² 점수",
+          "content": "**R² (결정계수)**: 모델이 데이터의 변동을 얼마나 설명하는지 나타냅니다.\n\n- `R² = 1`: 완벽한 예측\n- `R² = 0`: 평균으로 예측하는 것과 같음\n- `R² < 0`: 평균보다 못함\n\n```python\nfrom sklearn.metrics import r2_score\nscore = r2_score(y_test, y_pred)\n```\n\n일반적으로:\n- 0.9 이상: 매우 좋음\n- 0.7~0.9: 양호\n- 0.5 미만: 개선 필요",
+          "tags": "sklearn,R2,평가",
+          "order": 2
+        }
+      ],
+      "exercises": [
+        {
+          "title": "첫 번째 모델 학습",
+          "description": "`house_prices.csv`에서 `area`만 사용해 `price`를 예측하는 선형회귀 모델을 학습하세요.\n\n학습 후 **기울기(w)**와 **절편(b)**을 출력하세요.\n\n출력 형식:\n```\nw: 값(소수점 둘째자리)\nb: 값(소수점 둘째자리)\n```",
+          "initial_code": "import pandas as pd\nfrom sklearn.linear_model import LinearRegression\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 2
+        },
+        {
+          "title": "train/test 분리와 예측",
+          "description": "`house_prices.csv`에서 `area`, `rooms`, `age`를 특성으로, `price`를 타겟으로 사용하세요.\n\n1. `train_test_split`으로 80:20 분리 (`random_state=42`)\n2. 학습 후 테스트 세트 **처음 5개 예측값**을 소수점 첫째 자리로 출력\n\n출력 형식:\n```\npredictions: [값1, 값2, 값3, 값4, 값5]\n```",
+          "initial_code": "import pandas as pd\nfrom sklearn.linear_model import LinearRegression\nfrom sklearn.model_selection import train_test_split\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 2
+        },
+        {
+          "title": "모델 평가: MSE와 R²",
+          "description": "`house_prices.csv`를 80:20 분리(`random_state=42`)한 뒤, 다중 선형회귀 모델을 학습하고 **테스트 세트**에 대한 MSE와 R² 점수를 출력하세요.\n\n출력 형식:\n```\nMSE: 값(소수점 둘째자리)\nR2: 값(소수점 넷째자리)\n```",
+          "initial_code": "import pandas as pd\nfrom sklearn.linear_model import LinearRegression\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import mean_squared_error, r2_score\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 3
+        },
+        {
+          "title": "계수 해석",
+          "description": "다중 선형회귀 모델을 학습한 뒤, 각 특성의 **계수(coefficient)**를 출력하고 해석해 보세요.\n\n출력 형식:\n```\narea: 계수\nrooms: 계수\nage: 계수\nintercept: 절편\n```\n각 값은 소수점 둘째 자리까지 출력하세요.",
+          "initial_code": "import pandas as pd\nfrom sklearn.linear_model import LinearRegression\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 2
+        }
+      ]
+    },
+    {
+      "name": "모델 개선과 시각화",
+      "description": "특성 공학, 교차검증, matplotlib 시각화",
+      "order": 6,
+      "knowledge": [
+        {
+          "title": "특성 공학",
+          "content": "기존 특성을 변환해서 모델 성능을 높이는 기법입니다.\n\n```python\n# 다항 특성 추가\nfrom sklearn.preprocessing import PolynomialFeatures\npoly = PolynomialFeatures(degree=2, include_bias=False)\nX_poly = poly.fit_transform(X)\n\n# 표준화\nfrom sklearn.preprocessing import StandardScaler\nscaler = StandardScaler()\nX_scaled = scaler.fit_transform(X)\n```\n\n주의: 테스트 데이터는 `transform()`만 사용 (fit 하지 않음)",
+          "tags": "특성공학,전처리",
+          "order": 0
+        },
+        {
+          "title": "교차검증",
+          "content": "데이터를 K개로 나누어 K번 학습/평가하는 방법입니다.\n\n```python\nfrom sklearn.model_selection import cross_val_score\n\nscores = cross_val_score(model, X, y, cv=5, scoring='r2')\nprint(f'R² 평균: {scores.mean():.4f}')\nprint(f'R² 표준편차: {scores.std():.4f}')\n```\n\n- 한 번 분할보다 **안정적인 성능 추정**\n- `cv=5`: 5-fold 교차검증 (가장 흔함)",
+          "tags": "교차검증,평가",
+          "order": 1
+        }
+      ],
+      "exercises": [
+        {
+          "title": "교차검증으로 평가",
+          "description": "`house_prices.csv`에서 5-fold 교차검증으로 LinearRegression의 R² 점수 평균과 표준편차를 구하세요.\n\n출력 형식:\n```\nmean R2: 값(소수점 넷째자리)\nstd R2: 값(소수점 넷째자리)\n```",
+          "initial_code": "import pandas as pd\nfrom sklearn.linear_model import LinearRegression\nfrom sklearn.model_selection import cross_val_score\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 3
+        },
+        {
+          "title": "다항 회귀 비교",
+          "description": "`area` → `price` 예측에서 **단순 선형회귀**와 **2차 다항회귀**의 R²를 비교하세요.\n\n80:20 분리, `random_state=42` 사용.\n\n출력 형식:\n```\nlinear R2: 값\npoly R2: 값\n```\n소수점 넷째 자리까지 출력하세요.",
+          "initial_code": "import pandas as pd\nfrom sklearn.linear_model import LinearRegression\nfrom sklearn.preprocessing import PolynomialFeatures\nfrom sklearn.model_selection import train_test_split\nfrom sklearn.metrics import r2_score\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "ai_check",
+          "check_value": "",
+          "difficulty": 3
+        },
+        {
+          "title": "산점도와 회귀선 시각화",
+          "description": "`area`와 `price`의 산점도에 **회귀선**을 겹쳐 그리세요.\n\n- 산점도: 파란 점\n- 회귀선: 빨간 선\n- x축 레이블: `Area`\n- y축 레이블: `Price`\n- 제목: `Area vs Price`\n- 파일로 저장: `plot.png`\n\n저장 후 `saved plot.png`를 출력하세요.",
+          "initial_code": "import pandas as pd\nimport numpy as np\nimport matplotlib\nmatplotlib.use('Agg')\nimport matplotlib.pyplot as plt\nfrom sklearn.linear_model import LinearRegression\n\ndf = pd.read_csv('house_prices.csv')\n",
+          "check_type": "script_check",
+          "check_value": "python3 -c \"import os; assert os.path.exists('/workspace/plot.png'), 'plot.png not found'\"",
+          "difficulty": 3
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type {
-  Domain,
+  Topic,
   CurriculumTree,
   Exercise,
   ExecuteResult,
@@ -11,14 +11,21 @@ import type { Curriculum, Notebook, KnowledgeCard, Checkpoint } from "../api/cli
 
 export type SelectedItemType = "exercise" | "knowledge" | null;
 
+export interface ChatSnippet {
+  id: string;
+  label: string;
+  content: string;
+  type: "selection" | "code" | "block";
+}
+
 interface DojangState {
   selectedItemType: SelectedItemType;
 
-  // Domain
-  domains: Domain[];
-  currentDomain: Domain | null;
+  // Topic
+  topics: Topic[];
+  currentTopic: Topic | null;
 
-  // Curricula (multiple per domain)
+  // Curricula (multiple per topic)
   curricula: Curriculum[];
   currentCurriculumId: number | null;
   curriculumTree: CurriculumTree | null;
@@ -39,6 +46,9 @@ interface DojangState {
   currentCard: KnowledgeCard | null;
   isEditingCard: boolean;
 
+  // Chat context snippets
+  chatSnippets: ChatSnippet[];
+
   // Checkpoints
   checkpoints: Checkpoint[];
 
@@ -47,14 +57,16 @@ interface DojangState {
   _pollInterval: ReturnType<typeof setInterval> | null;
 
   // Actions
-  loadDomains: () => Promise<void>;
-  selectDomain: (domainId: number) => Promise<void>;
+  loadTopics: () => Promise<void>;
+  selectTopic: (topicId: number) => Promise<void>;
   loadCurricula: () => Promise<void>;
   selectCurriculum: (curriculumId: number) => Promise<void>;
   createCurriculum: (name: string) => Promise<void>;
   deleteCurriculum: (curriculumId: number) => Promise<void>;
   refreshCurriculumTree: () => Promise<void>;
-  deleteTopic: (topicId: number) => Promise<void>;
+  deleteSubject: (subjectId: number) => Promise<void>;
+  deleteExercise: (exerciseId: number) => Promise<void>;
+  deleteKnowledge: (id: number) => Promise<void>;
   selectExercise: (exerciseId: number) => Promise<void>;
   setEditorCode: (code: string) => void;
   runCode: () => Promise<void>;
@@ -74,14 +86,20 @@ interface DojangState {
   saveCheckpoint: (name?: string) => Promise<void>;
   restoreCheckpoint: (checkpointId: number) => Promise<void>;
   deleteCheckpoint: (checkpointId: number) => Promise<void>;
+  createTopic: (name: string, description?: string) => Promise<void>;
+  updateTopic: (id: number, updates: { name?: string; description?: string }) => Promise<void>;
+  deleteTopic: (id: number) => Promise<void>;
+  addChatSnippet: (snippet: Omit<ChatSnippet, "id">) => void;
+  removeChatSnippet: (id: string) => void;
+  clearChatSnippets: () => void;
   startNotifyPolling: () => void;
   stopNotifyPolling: () => void;
 }
 
 export const useStore = create<DojangState>((set, get) => ({
   selectedItemType: null,
-  domains: [],
-  currentDomain: null,
+  topics: [],
+  currentTopic: null,
   curricula: [],
   currentCurriculumId: null,
   curriculumTree: null,
@@ -97,23 +115,24 @@ export const useStore = create<DojangState>((set, get) => ({
   selectedCardId: null,
   currentCard: null,
   isEditingCard: false,
+  chatSnippets: [],
   checkpoints: [],
   _lastNotifyTs: Date.now() / 1000,
   _pollInterval: null,
 
-  loadDomains: async () => {
-    const domains = await api.getDomains();
-    set({ domains });
-    if (domains.length > 0 && !get().currentDomain) {
-      await get().selectDomain(domains[0].id);
+  loadTopics: async () => {
+    const topics = await api.getTopics();
+    set({ topics });
+    if (topics.length > 0 && !get().currentTopic) {
+      await get().selectTopic(topics[0].id);
     }
   },
 
-  selectDomain: async (domainId: number) => {
-    const { domains } = get();
-    const domain = domains.find((d) => d.id === domainId) || null;
+  selectTopic: async (topicId: number) => {
+    const { topics } = get();
+    const topic = topics.find((t) => t.id === topicId) || null;
     set({
-      currentDomain: domain,
+      currentTopic: topic,
       curricula: [],
       currentCurriculumId: null,
       curriculumTree: null,
@@ -129,16 +148,16 @@ export const useStore = create<DojangState>((set, get) => ({
       currentCard: null,
       selectedItemType: null,
     });
-    if (domain) {
+    if (topic) {
       await get().loadCurricula();
       await get().loadNotebooks();
     }
   },
 
   loadCurricula: async () => {
-    const { currentDomain } = get();
-    if (!currentDomain) return;
-    const curricula = await api.listCurricula(currentDomain.id);
+    const { currentTopic } = get();
+    if (!currentTopic) return;
+    const curricula = await api.listCurricula(currentTopic.id);
     set({ curricula });
     if (curricula.length > 0) {
       const def = curricula.find((c) => c.is_default) || curricula[0];
@@ -154,9 +173,9 @@ export const useStore = create<DojangState>((set, get) => ({
   },
 
   createCurriculum: async (name: string) => {
-    const { currentDomain } = get();
-    if (!currentDomain) return;
-    const { id } = await api.createCurriculum(currentDomain.id, name);
+    const { currentTopic } = get();
+    if (!currentTopic) return;
+    const { id } = await api.createCurriculum(currentTopic.id, name);
     await get().loadCurricula();
     await get().selectCurriculum(id);
   },
@@ -173,10 +192,23 @@ export const useStore = create<DojangState>((set, get) => ({
     set({ curriculumTree: tree });
   },
 
-  deleteTopic: async (topicId: number) => {
-    await api.deleteTopic(topicId);
+  deleteSubject: async (subjectId: number) => {
+    await api.deleteSubject(subjectId);
     set({ selectedExerciseId: null, currentExercise: null, selectedCardId: null, currentCard: null, selectedItemType: null });
     await get().refreshCurriculumTree();
+  },
+
+  deleteExercise: async (exerciseId: number) => {
+    await api.deleteExercise(exerciseId);
+    set({ selectedExerciseId: null, currentExercise: null, selectedItemType: null });
+    await get().refreshCurriculumTree();
+  },
+
+  deleteKnowledge: async (id: number) => {
+    await api.deleteKnowledge(id);
+    set({ selectedCardId: null, currentCard: null, selectedItemType: null });
+    await get().refreshCurriculumTree();
+    await get().loadKnowledge();
   },
 
   selectExercise: async (exerciseId: number) => {
@@ -196,11 +228,11 @@ export const useStore = create<DojangState>((set, get) => ({
   setEditorCode: (code) => set({ editorCode: code }),
 
   runCode: async () => {
-    const { currentDomain, editorCode } = get();
-    if (!currentDomain || !editorCode.trim()) return;
+    const { currentTopic, editorCode } = get();
+    if (!currentTopic || !editorCode.trim()) return;
     set({ isExecuting: true, lastResult: null, lastAttempt: null });
     try {
-      const result = await api.executeCode(currentDomain.id, editorCode);
+      const result = await api.executeCode(currentTopic.id, editorCode);
       set({ lastResult: result });
     } catch (e: any) {
       set({
@@ -218,11 +250,11 @@ export const useStore = create<DojangState>((set, get) => ({
   },
 
   runCodeRaw: async (code: string): Promise<ExecuteResult> => {
-    const { currentDomain } = get();
-    if (!currentDomain) throw new Error("No domain selected");
+    const { currentTopic } = get();
+    if (!currentTopic) throw new Error("No topic selected");
     set({ isExecuting: true });
     try {
-      const result = await api.executeCode(currentDomain.id, code);
+      const result = await api.executeCode(currentTopic.id, code);
       set({ lastResult: result });
       return result;
     } finally {
@@ -250,10 +282,10 @@ export const useStore = create<DojangState>((set, get) => ({
   },
 
   loadNotebooks: async () => {
-    const { currentDomain } = get();
-    if (!currentDomain) return;
+    const { currentTopic } = get();
+    if (!currentTopic) return;
     try {
-      const notebooks = await api.listNotebooks(currentDomain.id);
+      const notebooks = await api.listNotebooks(currentTopic.id);
       set({ notebooks });
       if (notebooks.length > 0 && !get().currentNotebookId) {
         const def = notebooks.find((n) => n.is_default) || notebooks[0];
@@ -268,9 +300,9 @@ export const useStore = create<DojangState>((set, get) => ({
   },
 
   createNotebook: async (name: string) => {
-    const { currentDomain } = get();
-    if (!currentDomain) return;
-    const { id } = await api.createNotebook(currentDomain.id, name);
+    const { currentTopic } = get();
+    if (!currentTopic) return;
+    const { id } = await api.createNotebook(currentTopic.id, name);
     await get().loadNotebooks();
     await get().selectNotebook(id);
   },
@@ -305,9 +337,9 @@ export const useStore = create<DojangState>((set, get) => ({
   },
 
   createCard: async (title) => {
-    const { currentDomain, currentNotebookId } = get();
+    const { currentTopic, currentNotebookId } = get();
     try {
-      const { id } = await api.createKnowledge({ notebook_id: currentNotebookId, domain_id: currentDomain?.id, title, content: "" });
+      const { id } = await api.createKnowledge({ notebook_id: currentNotebookId, topic_id: currentTopic?.id, title, content: "" });
       await get().loadKnowledge();
       await get().selectCard(id);
       set({ isEditingCard: true });
@@ -357,6 +389,36 @@ export const useStore = create<DojangState>((set, get) => ({
     await api.deleteCheckpoint(checkpointId);
     await get().loadCheckpoints();
   },
+
+  createTopic: async (name, description) => {
+    await api.createTopic(name, description);
+    await get().loadTopics();
+  },
+
+  updateTopic: async (id, updates) => {
+    await api.updateTopic(id, updates);
+    await get().loadTopics();
+  },
+
+  deleteTopic: async (id) => {
+    await api.deleteTopic(id);
+    const { currentTopic } = get();
+    if (currentTopic?.id === id) {
+      set({ currentTopic: null, curricula: [], currentCurriculumId: null, curriculumTree: null });
+    }
+    await get().loadTopics();
+  },
+
+  addChatSnippet: (snippet) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    set({ chatSnippets: [...get().chatSnippets, { ...snippet, id }] });
+  },
+
+  removeChatSnippet: (id) => {
+    set({ chatSnippets: get().chatSnippets.filter((s) => s.id !== id) });
+  },
+
+  clearChatSnippets: () => set({ chatSnippets: [] }),
 
   startNotifyPolling: () => {
     if (get()._pollInterval) return;

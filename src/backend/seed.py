@@ -5,72 +5,73 @@ import aiosqlite
 
 from src.backend.database import get_connection
 
-DOMAINS_DIR = Path(__file__).parent.parent.parent / "build"
+TOPICS_DIR = Path(__file__).parent.parent.parent / "build"
 
 
 async def seed_if_empty(db_path: str) -> None:
     db = await get_connection(db_path)
     try:
-        cursor = await db.execute("SELECT COUNT(*) as c FROM domains")
+        cursor = await db.execute("SELECT COUNT(*) as c FROM topics")
         row = await cursor.fetchone()
         if row["c"] > 0:
             return
 
-        # Insert domains
-        domain_configs = [
+        # Insert topics
+        topic_configs = [
             ("CLI", "리눅스 명령어 연습", "dojang-cli"),
             ("Git", "Git 버전 관리 연습", "dojang-git"),
             ("Docker", "Docker 컨테이너 연습", "dojang-docker"),
             ("SQL", "SQL 쿼리 작성 연습", "dojang-sql"),
+            ("Python", "파이썬 데이터 분석 · 머신러닝", "dojang-python"),
         ]
-        for name, desc, container in domain_configs:
+        for name, desc, container in topic_configs:
             await db.execute(
-                "INSERT INTO domains (name, description, container_name) VALUES (?, ?, ?)",
+                "INSERT INTO topics (name, description, container_name) VALUES (?, ?, ?)",
                 (name, desc, container),
             )
 
         await db.commit()
 
-        # Load curriculum for each domain
-        for domain_dir_name, domain_name in [("cli", "CLI"), ("git", "Git"), ("docker", "Docker"), ("sql", "SQL")]:
-            curriculum_path = DOMAINS_DIR / domain_dir_name / "curriculum.json"
+        # Load curriculum for each topic
+        for topic_dir_name, topic_name in [("cli", "CLI"), ("git", "Git"), ("docker", "Docker"), ("sql", "SQL"), ("python", "Python")]:
+            curriculum_path = TOPICS_DIR / topic_dir_name / "curriculum.json"
             if not curriculum_path.exists():
                 continue
 
             cursor = await db.execute(
-                "SELECT id FROM domains WHERE name = ?", (domain_name,)
+                "SELECT id FROM topics WHERE name = ?", (topic_name,)
             )
-            domain_row = await cursor.fetchone()
-            domain_id = domain_row["id"]
+            topic_row = await cursor.fetchone()
+            topic_id = topic_row["id"]
 
             curriculum = json.loads(curriculum_path.read_text())
 
-            # Create default curriculum for this domain
-            cur_name = curriculum.get("name", f"{domain_name} 기초")
-            cur_desc = curriculum.get("description", f"{domain_name} 기본 커리큘럼")
+            # Create default curriculum for this topic
+            cur_name = curriculum.get("name", f"{topic_name} 기초")
+            cur_desc = curriculum.get("description", f"{topic_name} 기본 커리큘럼")
             cursor = await db.execute(
-                "INSERT INTO curricula (domain_id, name, description, is_default) VALUES (?, ?, ?, 1)",
-                (domain_id, cur_name, cur_desc),
+                "INSERT INTO curricula (topic_id, name, description, is_default) VALUES (?, ?, ?, 1)",
+                (topic_id, cur_name, cur_desc),
             )
             curriculum_id = cursor.lastrowid
 
-            for topic_data in curriculum.get("topics", []):
-                await _insert_topic(db, curriculum_id, topic_data, parent_id=None, domain_id=domain_id)
+            for subject_data in curriculum.get("topics", []):
+                await _insert_subject(db, curriculum_id, subject_data, parent_id=None, topic_id=topic_id)
 
             # Seed knowledge notebooks
-            knowledge_path = DOMAINS_DIR / domain_dir_name / "knowledge.json"
+            knowledge_path = TOPICS_DIR / topic_dir_name / "knowledge.json"
             if knowledge_path.exists():
                 knowledge = json.loads(knowledge_path.read_text())
                 for nb in knowledge.get("notebooks", []):
                     cursor = await db.execute(
-                        "INSERT INTO notebooks (domain_id, name, description, is_default) VALUES (?, ?, ?, 1)",
-                        (domain_id, nb["name"], nb.get("description", "")),
+                        "INSERT INTO notebooks (topic_id, name, description, is_default) VALUES (?, ?, ?, 1)",
+                        (topic_id, nb["name"], nb.get("description", "")),
                     )
                     notebook_id = cursor.lastrowid
                     for card in nb.get("cards", []):
                         await db.execute(
-                            "INSERT INTO knowledge (notebook_id, domain_id, title, content, tags) VALUES (?, ?, ?, ?, ?)",
-                            (notebook_id, domain_id, card["title"], card.get("content", ""), card.get("tags", "")),
+                            "INSERT INTO knowledge (notebook_id, topic_id, title, content, tags) VALUES (?, ?, ?, ?, ?)",
+                            (notebook_id, topic_id, card["title"], card.get("content", ""), card.get("tags", "")),
                         )
 
             await db.commit()
@@ -78,33 +79,33 @@ async def seed_if_empty(db_path: str) -> None:
         await db.close()
 
 
-async def _insert_topic(
+async def _insert_subject(
     db: aiosqlite.Connection,
     curriculum_id: int,
-    topic_data: dict,
+    subject_data: dict,
     parent_id: int | None,
-    domain_id: int | None = None,
+    topic_id: int | None = None,
 ) -> None:
     cursor = await db.execute(
-        "INSERT INTO topics (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO subjects (curriculum_id, name, description, order_num, parent_id) VALUES (?, ?, ?, ?, ?)",
         (
             curriculum_id,
-            topic_data["name"],
-            topic_data.get("description", ""),
-            topic_data.get("order", 0),
+            subject_data["name"],
+            subject_data.get("description", ""),
+            subject_data.get("order", 0),
             parent_id,
         ),
     )
-    topic_id = cursor.lastrowid
+    subject_id = cursor.lastrowid
 
-    # Knowledge cards embedded in the topic
-    for card in topic_data.get("knowledge", []):
+    # Knowledge cards embedded in the subject
+    for card in subject_data.get("knowledge", []):
         await db.execute(
-            "INSERT INTO knowledge (topic_id, domain_id, title, content, tags, order_num) "
+            "INSERT INTO knowledge (subject_id, topic_id, title, content, tags, order_num) "
             "VALUES (?, ?, ?, ?, ?, ?)",
             (
+                subject_id,
                 topic_id,
-                domain_id,
                 card["title"],
                 card.get("content", ""),
                 card.get("tags", ""),
@@ -112,12 +113,12 @@ async def _insert_topic(
             ),
         )
 
-    for ex in topic_data.get("exercises", []):
+    for ex in subject_data.get("exercises", []):
         await db.execute(
-            "INSERT INTO exercises (topic_id, title, description, initial_code, check_type, check_value, difficulty) "
+            "INSERT INTO exercises (subject_id, title, description, initial_code, check_type, check_value, difficulty) "
             "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
-                topic_id,
+                subject_id,
                 ex["title"],
                 ex.get("description", ""),
                 ex.get("initial_code", ""),
@@ -127,5 +128,5 @@ async def _insert_topic(
             ),
         )
 
-    for child in topic_data.get("children", []):
-        await _insert_topic(db, curriculum_id, child, parent_id=topic_id, domain_id=domain_id)
+    for child in subject_data.get("children", []):
+        await _insert_subject(db, curriculum_id, child, parent_id=subject_id, topic_id=topic_id)
