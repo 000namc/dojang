@@ -19,7 +19,9 @@ async def get_db(settings: Settings = Depends(get_settings)):
 
 @router.get("/topics")
 async def list_topics(db: aiosqlite.Connection = Depends(get_db)):
-    cursor = await db.execute("SELECT id, name, description, container_name FROM topics ORDER BY id")
+    cursor = await db.execute(
+        "SELECT id, name, description, container_name, cluster_id, default_curriculum_id FROM topics ORDER BY id"
+    )
     rows = await cursor.fetchall()
     return [dict(r) for r in rows]
 
@@ -27,7 +29,7 @@ async def list_topics(db: aiosqlite.Connection = Depends(get_db)):
 @router.get("/topics/{topic_id}")
 async def get_topic(topic_id: int, db: aiosqlite.Connection = Depends(get_db)):
     cursor = await db.execute(
-        "SELECT id, name, description, container_name FROM topics WHERE id = ?",
+        "SELECT id, name, description, container_name, cluster_id, default_curriculum_id FROM topics WHERE id = ?",
         (topic_id,),
     )
     row = await cursor.fetchone()
@@ -38,9 +40,14 @@ async def get_topic(topic_id: int, db: aiosqlite.Connection = Depends(get_db)):
 
 @router.post("/topics")
 async def create_topic(req: CreateTopicRequest, db: aiosqlite.Connection = Depends(get_db)):
+    # 신규 토픽은 기본 cluster에 자동 할당
+    cur = await db.execute("SELECT id FROM clusters WHERE is_default = 1 LIMIT 1")
+    default_row = await cur.fetchone()
+    default_cluster_id = default_row["id"] if default_row else None
+
     cursor = await db.execute(
-        "INSERT INTO topics (name, description, container_name) VALUES (?, ?, ?)",
-        (req.name, req.description, req.container_name),
+        "INSERT INTO topics (name, description, container_name, cluster_id) VALUES (?, ?, ?, ?)",
+        (req.name, req.description, req.container_name, default_cluster_id),
     )
     await db.commit()
     return {"id": cursor.lastrowid, "name": req.name}
@@ -49,13 +56,19 @@ async def create_topic(req: CreateTopicRequest, db: aiosqlite.Connection = Depen
 @router.put("/topics/{topic_id}")
 async def update_topic(topic_id: int, req: UpdateTopicRequest, db: aiosqlite.Connection = Depends(get_db)):
     updates = []
-    values = []
+    values: list = []
     if req.name is not None:
         updates.append("name = ?")
         values.append(req.name)
     if req.description is not None:
         updates.append("description = ?")
         values.append(req.description)
+    if req.cluster_id is not None:
+        updates.append("cluster_id = ?")
+        values.append(req.cluster_id)
+    if req.default_curriculum_id is not None:
+        updates.append("default_curriculum_id = ?")
+        values.append(req.default_curriculum_id)
 
     if not updates:
         raise HTTPException(400, "No fields to update")

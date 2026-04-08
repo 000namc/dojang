@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Send, Play } from "lucide-react";
 import Markdown from "./Markdown";
+import SelectionPopup from "./SelectionPopup";
 import { useStore } from "../stores/store";
 import type { UiType } from "../types";
 import TerminalWidget from "./TerminalWidget";
@@ -25,6 +26,7 @@ export default function ExercisePanel() {
     submitAttempt,
   } = useStore();
   const [textAnswer, setTextAnswer] = useState("");
+  const contentRef = useRef<HTMLDivElement>(null);
 
   if (!currentExercise) {
     return (
@@ -41,10 +43,11 @@ export default function ExercisePanel() {
   const resolved = resolveUiType(currentExercise.ui_type || "auto", topicName);
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-white dark:bg-gray-900">
+    <div className="relative flex h-full flex-col overflow-y-auto bg-white dark:bg-gray-900">
       <div className="mx-auto w-full max-w-3xl px-6 py-8 space-y-6">
         {/* Exercise card */}
-        <div className="rounded-xl bg-gray-100 dark:bg-gray-800 p-6">
+        <div ref={contentRef} className="relative rounded-xl bg-gray-100 dark:bg-gray-800 p-6">
+          <SelectionPopup containerRef={contentRef} sourceText={currentExercise.description || ""} />
           <div className="flex items-center gap-2 mb-3">
             <span className="rounded-full bg-primary-100 dark:bg-primary-900/40 px-2.5 py-0.5 text-xs font-semibold text-primary-700 dark:text-primary-300">
               Lv.{currentExercise.difficulty}

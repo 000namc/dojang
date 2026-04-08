@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import ExercisePanel from "../components/ExercisePanel";
 import KnowledgePanel from "../components/KnowledgePanel";
-import ChatDrawer from "../components/ChatDrawer";
 import { useStore } from "../stores/store";
 import { cn } from "../lib/cn";
 
@@ -23,8 +22,8 @@ export default function Learn({ className }: LearnProps) {
       {/* Left: Curriculum sidebar */}
       <Sidebar className="w-64 shrink-0 border-r border-gray-200 dark:border-gray-800" />
 
-      {/* Content area */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
+      {/* Center: Content area */}
+      <div className="flex-1 flex flex-col min-w-0">
         {selectedItemType === "exercise" ? (
           <ExercisePanel />
         ) : selectedItemType === "knowledge" ? (
@@ -37,7 +36,6 @@ export default function Learn({ className }: LearnProps) {
             </div>
           </div>
         )}
-        <ChatDrawer />
       </div>
     </div>
   );

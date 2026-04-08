@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Pencil, Trash2, Save, X, Tag } from "lucide-react";
 import Markdown from "./Markdown";
+import SelectionPopup from "./SelectionPopup";
 import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
 
@@ -18,12 +19,14 @@ export default function KnowledgePanel() {
     );
   }
 
+  const contentRef = useRef<HTMLDivElement>(null);
+
   if (isEditingCard) {
     return <CardEditor card={currentCard} onSave={saveCard} onCancel={() => setEditingCard(false)} />;
   }
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-white dark:bg-gray-900">
+    <div className="relative flex h-full flex-col overflow-y-auto bg-white dark:bg-gray-900">
       <div className="mx-auto w-full max-w-3xl px-6 py-8 space-y-6">
         {/* Card header */}
         <div className="rounded-xl bg-gray-100 dark:bg-gray-800 p-6">
@@ -64,7 +67,8 @@ export default function KnowledgePanel() {
         </div>
 
         {/* Content */}
-        <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
+        <div ref={contentRef} className="relative prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300">
+          <SelectionPopup containerRef={contentRef} sourceText={currentCard.content || ""} />
           <Markdown>{currentCard.content || "*아직 내용이 없습니다. 편집 버튼을 눌러 작성하세요.*"}</Markdown>
         </div>
 

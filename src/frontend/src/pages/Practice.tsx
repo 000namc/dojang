@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import ExercisePanel from "../components/ExercisePanel";
 import KnowledgePanel from "../components/KnowledgePanel";
-import ChatPanel from "../components/ChatPanel";
+import TerminalPanel from "../components/TerminalPanel";
 import ThemeToggle from "../components/ThemeToggle";
 import { useStore } from "../stores/store";
 
@@ -35,8 +35,8 @@ export default function Practice() {
         )}
       </div>
 
-      {/* Right: AI 튜터 */}
-      <ChatPanel className="w-[420px] shrink-0 border-l border-gray-200 dark:border-gray-800" />
+      {/* Right: Coding agent terminal (Claude Code / OpenCode) */}
+      <TerminalPanel className="w-[420px] shrink-0 border-l border-gray-200 dark:border-gray-800" />
 
       {/* Theme toggle */}
       <div className="fixed top-2 right-2 z-50">

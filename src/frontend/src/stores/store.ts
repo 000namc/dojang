@@ -46,7 +46,11 @@ interface DojangState {
   currentCard: KnowledgeCard | null;
   isEditingCard: boolean;
 
-  // Chat context snippets
+  // Agent context (synced to data/current_context.md)
+  contextRef: { type: "exercise" | "knowledge"; id: number; title: string } | null;
+  contextSnippets: { id: string; lineStart?: number; lineEnd?: number; text: string }[];
+
+  // Chat context snippets (legacy — kept for ChatPanel)
   chatSnippets: ChatSnippet[];
 
   // Checkpoints
@@ -89,6 +93,10 @@ interface DojangState {
   createTopic: (name: string, description?: string) => Promise<void>;
   updateTopic: (id: number, updates: { name?: string; description?: string }) => Promise<void>;
   deleteTopic: (id: number) => Promise<void>;
+  addContextSnippet: (text: string, lineStart?: number, lineEnd?: number) => void;
+  removeContextSnippet: (id: string) => void;
+  clearContextSnippets: () => void;
+  _syncContextFile: () => void;
   addChatSnippet: (snippet: Omit<ChatSnippet, "id">) => void;
   removeChatSnippet: (id: string) => void;
   clearChatSnippets: () => void;
@@ -115,6 +123,8 @@ export const useStore = create<DojangState>((set, get) => ({
   selectedCardId: null,
   currentCard: null,
   isEditingCard: false,
+  contextRef: null,
+  contextSnippets: [],
   chatSnippets: [],
   checkpoints: [],
   _lastNotifyTs: Date.now() / 1000,
@@ -223,6 +233,8 @@ export const useStore = create<DojangState>((set, get) => ({
       selectedCardId: null,
       currentCard: null,
     });
+    set({ contextRef: { type: "exercise", id: exercise.id, title: exercise.title }, contextSnippets: [] });
+    get()._syncContextFile();
   },
 
   setEditorCode: (code) => set({ editorCode: code }),
@@ -333,6 +345,8 @@ export const useStore = create<DojangState>((set, get) => ({
         selectedExerciseId: null,
         currentExercise: null,
       });
+      set({ contextRef: { type: "knowledge", id: card.id, title: card.title }, contextSnippets: [] });
+      get()._syncContextFile();
     } catch {}
   },
 
@@ -407,6 +421,41 @@ export const useStore = create<DojangState>((set, get) => ({
       set({ currentTopic: null, curricula: [], currentCurriculumId: null, curriculumTree: null });
     }
     await get().loadTopics();
+  },
+
+  addContextSnippet: (text: string, lineStart?: number, lineEnd?: number) => {
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    set({ contextSnippets: [...get().contextSnippets, { id, lineStart, lineEnd, text }] });
+    get()._syncContextFile();
+  },
+
+  removeContextSnippet: (id: string) => {
+    set({ contextSnippets: get().contextSnippets.filter((s) => s.id !== id) });
+    get()._syncContextFile();
+  },
+
+  clearContextSnippets: () => {
+    set({ contextSnippets: [] });
+    get()._syncContextFile();
+  },
+
+  _syncContextFile: () => {
+    const { contextRef, contextSnippets } = get();
+    const lines: string[] = [];
+    if (contextRef) {
+      lines.push(`@${contextRef.type}:${contextRef.title} #${contextRef.id}`);
+    }
+    for (const s of contextSnippets) {
+      lines.push("");
+      let prefix = "";
+      if (s.lineStart != null) {
+        prefix = s.lineEnd != null && s.lineEnd > s.lineStart
+          ? `L${s.lineStart}:${s.lineEnd} `
+          : `L${s.lineStart} `;
+      }
+      lines.push(`${prefix}${s.text}`);
+    }
+    api.putContext(lines.join("\n")).catch(() => {});
   },
 
   addChatSnippet: (snippet) => {

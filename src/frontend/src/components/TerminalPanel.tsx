@@ -4,21 +4,57 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { cn } from "../lib/cn";
-import { Play, RotateCcw } from "lucide-react";
+import { Play, RotateCcw, ChevronDown, X } from "lucide-react";
+import { useStore } from "../stores/store";
 
-export default function TerminalPanel({ className }: { className?: string }) {
+type AgentId = "claude" | "opencode";
+
+interface AgentInfo {
+  id: AgentId;
+  label: string;
+  installed: boolean;
+}
+
+const FALLBACK_AGENTS: AgentInfo[] = [
+  { id: "claude", label: "Claude Code", installed: true },
+  { id: "opencode", label: "OpenCode", installed: false },
+];
+
+export default function TerminalPanel({
+  className,
+  sketchId,
+}: {
+  className?: string;
+  sketchId?: number | null;
+}) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   const [connected, setConnected] = useState(false);
   const [started, setStarted] = useState(false);
+  const [agent, setAgent] = useState<AgentId>("claude");
+  const [agents, setAgents] = useState<AgentInfo[]>(FALLBACK_AGENTS);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  // Actually open terminal + WS after DOM is ready
+  const { contextRef, contextSnippets, removeContextSnippet, clearContextSnippets } = useStore();
+
+  // Fetch available agents
+  useEffect(() => {
+    fetch("/api/agents")
+      .then((r) => r.json())
+      .then((data: AgentInfo[]) => {
+        setAgents(data);
+        const installed = data.find((a) => a.installed);
+        if (installed) setAgent(installed.id);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Open terminal + WS
   useEffect(() => {
     if (!started || !terminalRef.current) return;
 
-    // Cleanup previous
     cleanupRef.current?.();
     wsRef.current?.close();
     termRef.current?.dispose();
@@ -53,9 +89,12 @@ export default function TerminalPanel({ className }: { className?: string }) {
     term.open(terminalRef.current);
     fitAddon.fit();
 
-    // WebSocket
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws/terminal`);
+    const params = new URLSearchParams({ agent });
+    if (sketchId != null) params.set("sketch_id", String(sketchId));
+    const ws = new WebSocket(
+      `${protocol}//${window.location.host}/ws/terminal?${params.toString()}`,
+    );
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -108,20 +147,66 @@ export default function TerminalPanel({ className }: { className?: string }) {
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [started]);
+  }, [started, agent, sketchId]);
 
   const reconnect = useCallback(() => {
-    // Force re-mount by toggling started
     setStarted(false);
     setTimeout(() => setStarted(true), 50);
   }, []);
+
+  const switchAgent = (id: AgentId) => {
+    setAgent(id);
+    setDropdownOpen(false);
+    if (started) {
+      setStarted(false);
+      setTimeout(() => setStarted(true), 50);
+    }
+  };
+
+  const currentAgent = agents.find((a) => a.id === agent);
+  const hasContext = contextRef || contextSnippets.length > 0;
 
   return (
     <div className={cn("flex flex-col bg-[#1a1b26]", className)}>
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-700 px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-400">Claude Code</span>
+          {/* Agent selector */}
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-gray-300 hover:bg-gray-700 transition-colors"
+            >
+              {currentAgent?.label ?? agent}
+              <ChevronDown size={12} className={cn("transition-transform", dropdownOpen && "rotate-180")} />
+            </button>
+            {dropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                <div className="absolute left-0 top-full mt-1 z-20 min-w-[140px] rounded-md border border-gray-700 bg-gray-800 py-1 shadow-lg">
+                  {agents.map((a) => (
+                    <button
+                      key={a.id}
+                      onClick={() => switchAgent(a.id)}
+                      disabled={!a.installed}
+                      className={cn(
+                        "flex w-full items-center justify-between px-3 py-1.5 text-xs text-left",
+                        a.installed
+                          ? "text-gray-300 hover:bg-gray-700"
+                          : "text-gray-600 cursor-not-allowed",
+                        a.id === agent && "bg-gray-700/50",
+                      )}
+                    >
+                      <span>{a.label}</span>
+                      {!a.installed && (
+                        <span className="text-[10px] text-gray-600">미설치</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           {started && (
             <span
               className={cn(
@@ -142,6 +227,51 @@ export default function TerminalPanel({ className }: { className?: string }) {
         )}
       </div>
 
+      {/* Context chips */}
+      {hasContext && (
+        <div className="flex flex-wrap items-center gap-1 border-b border-gray-700 px-3 py-1.5">
+          {/* Doc reference */}
+          {contextRef && (
+            <span className="inline-flex items-center gap-1 rounded bg-blue-900/30 border border-blue-800 px-1.5 py-0.5 text-[11px] text-blue-400 font-mono">
+              @{contextRef.type === "exercise" ? "exercise" : "knowledge"}:{contextRef.title}
+            </span>
+          )}
+
+          {/* Line snippets */}
+          {contextSnippets.map((s) => (
+            <span
+              key={s.id}
+              className="group inline-flex items-center gap-1 rounded bg-gray-800 border border-gray-700 px-1.5 py-0.5 text-[11px] text-gray-400 font-mono"
+              title={s.text}
+            >
+              {(() => {
+                const docLabel = contextRef ? `@${contextRef.type}` : "@doc";
+                const linePart = s.lineStart != null
+                  ? (s.lineEnd != null && s.lineEnd > s.lineStart ? `L${s.lineStart}:${s.lineEnd}` : `L${s.lineStart}`)
+                  : null;
+                return linePart ? `${docLabel} ${linePart}` : docLabel;
+              })()}
+              <button
+                onClick={() => removeContextSnippet(s.id)}
+                className="ml-0.5 rounded-sm opacity-0 group-hover:opacity-100 hover:text-gray-200 transition-opacity"
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+
+          {/* Clear all */}
+          {contextSnippets.length > 1 && (
+            <button
+              onClick={clearContextSnippets}
+              className="text-[10px] text-gray-600 hover:text-gray-400 ml-1"
+            >
+              모두 지우기
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Terminal or start button */}
       {!started ? (
         <div className="flex-1 flex items-center justify-center">
@@ -150,7 +280,7 @@ export default function TerminalPanel({ className }: { className?: string }) {
             className="flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600 transition-colors"
           >
             <Play size={16} />
-            Claude Code 세션 시작
+            {currentAgent?.label ?? agent} 세션 시작
           </button>
         </div>
       ) : (

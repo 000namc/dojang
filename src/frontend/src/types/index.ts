@@ -3,6 +3,8 @@ export interface Topic {
   name: string;
   description: string | null;
   container_name: string;
+  cluster_id: number | null;
+  default_curriculum_id: number | null;
 }
 
 export interface ExerciseSummary {
