@@ -176,12 +176,29 @@ export async function deleteKnowledge(id: number): Promise<void> {
   await api.delete(`/api/knowledge/${id}`);
 }
 
+// Context file (synced to data/current_context.md for coding agents)
+export async function getContext(): Promise<string> {
+  const { data } = await api.get("/api/context");
+  return data.content;
+}
+export async function putContext(content: string): Promise<void> {
+  await api.put("/api/context", { content });
+}
+
 // Topic CRUD
 export async function createTopic(name: string, description?: string): Promise<{ id: number }> {
   const { data } = await api.post("/api/topics", { name, description: description || "", container_name: `dojang-${name.toLowerCase()}` });
   return data;
 }
-export async function updateTopic(id: number, updates: { name?: string; description?: string }): Promise<void> {
+export async function updateTopic(
+  id: number,
+  updates: {
+    name?: string;
+    description?: string;
+    cluster_id?: number;
+    default_curriculum_id?: number;
+  },
+): Promise<void> {
   await api.put(`/api/topics/${id}`, updates);
 }
 export async function deleteTopic(id: number): Promise<void> {
@@ -192,27 +209,86 @@ export async function getTopicStats(id: number): Promise<{ curriculum_count: num
   return data;
 }
 
-// Community
-export async function shareCurriculum(req: { curriculum_id: number; title: string; description?: string; subject?: string; tags?: string }): Promise<{ id: number }> {
-  const { data } = await api.post("/api/community/share", req);
+// Clusters
+export interface Cluster {
+  id: number;
+  name: string;
+  description: string;
+  order_num: number;
+  is_default: number;
+  created_at: string;
+  topic_count: number;
+}
+export async function listClusters(): Promise<Cluster[]> {
+  const { data } = await api.get("/api/clusters");
   return data;
 }
-export async function listCommunity(params: { sort?: string; q?: string; page?: number }): Promise<{ items: any[]; total: number; page: number }> {
-  const { data } = await api.get("/api/community", { params });
+export async function createCluster(payload: { name: string; description?: string }): Promise<{ id: number; name: string }> {
+  const { data } = await api.post("/api/clusters", payload);
   return data;
 }
-export async function upvoteCommunity(id: number, voterId?: string): Promise<{ upvoted: boolean; upvotes: number }> {
-  const vid = voterId || getVoterId();
-  const { data } = await api.post(`/api/community/${id}/upvote`, { voter_id: vid });
-  return data;
+export async function updateCluster(id: number, payload: { name?: string; description?: string }): Promise<void> {
+  await api.patch(`/api/clusters/${id}`, payload);
 }
-export async function forkCommunity(id: number, topicId: number): Promise<{ curriculum_id: number }> {
-  const { data } = await api.post(`/api/community/${id}/fork`, { topic_id: topicId });
-  return data;
+export async function deleteCluster(id: number): Promise<void> {
+  await api.delete(`/api/clusters/${id}`);
 }
 
-function getVoterId(): string {
-  let id = localStorage.getItem("dojang_voter_id");
-  if (!id) { id = crypto.randomUUID(); localStorage.setItem("dojang_voter_id", id); }
-  return id;
+// Sketches
+export interface SketchSummary {
+  id: number;
+  title: string;
+  preview: string;
+  claude_session_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface Sketch extends SketchSummary {
+  content: string;
+}
+export async function listSketches(): Promise<SketchSummary[]> {
+  const { data } = await api.get("/api/sketches");
+  return data;
+}
+export async function getSketch(id: number): Promise<Sketch> {
+  const { data } = await api.get(`/api/sketches/${id}`);
+  return data;
+}
+export async function createSketch(payload: { title?: string; content?: string }): Promise<Sketch> {
+  const { data } = await api.post("/api/sketches", payload);
+  return data;
+}
+export async function updateSketch(id: number, updates: { title?: string; content?: string }): Promise<void> {
+  await api.patch(`/api/sketches/${id}`, updates);
+}
+export async function deleteSketch(id: number): Promise<void> {
+  await api.delete(`/api/sketches/${id}`);
+}
+
+// Knowledge graph
+export interface KGNode {
+  id: string;
+  kind: "subject" | "exercise" | "knowledge";
+  label: string;
+  topic_id: number;
+  topic_name: string;
+  curriculum_id: number;
+  confidence: number;
+  attempts: number;
+  status: "unknown" | "learning" | "mastered";
+  // subject only
+  exercise_count?: number;
+  knowledge_count?: number;
+  // satellite only
+  difficulty?: number;
+  parent?: string;
+}
+export interface KGLink {
+  source: string;
+  target: string;
+  kind: "chain" | "satellite";
+}
+export async function getKnowledgeGraph(): Promise<{ nodes: KGNode[]; links: KGLink[] }> {
+  const { data } = await api.get("/api/knowledge-graph");
+  return data;
 }

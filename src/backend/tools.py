@@ -1,4 +1,4 @@
-"""도구 레지스트리 — MCP(Claude Code)와 OpenAI(GPT chat) 양쪽에서 사용하는 단일 소스."""
+"""도구 레지스트리 — Claude Code 세션이 MCP를 통해 호출하는 도구들."""
 
 import json
 import sqlite3
@@ -406,21 +406,6 @@ def _create_topic(args: dict) -> dict:
 
 TOOL_REGISTRY: list[dict] = [
     {
-        "name": "design_curriculum",
-        "description": "AI 설계 전문가에게 커리큘럼 구조를 설계하게 합니다. 주제와 커리큘럼 이름이 정해진 후 호출하세요. 반환된 설계안을 수정하지 말고 그대로 학습자에게 보여주세요. 요약하거나 생략하지 마세요.",
-        "schema": {
-            "type": "object",
-            "properties": {
-                "topic": {"type": "string", "description": "주제(토픽) 이름"},
-                "name": {"type": "string", "description": "커리큘럼 이름"},
-                "description": {"type": "string", "description": "커리큘럼 설명", "default": ""},
-                "level": {"type": "string", "description": "대상 수준 (초보자, 중급, 고급)", "default": "초보자"},
-            },
-            "required": ["topic", "name"],
-        },
-        "handler": lambda args: {"error": "design_curriculum은 chat_engine에서 직접 처리됩니다"},
-    },
-    {
         "name": "get_curriculum",
         "description": "현재 주제(토픽)의 커리큘럼 트리를 가져옵니다. 과목(서브젝트)별 연습문제와 진행률이 포함됩니다.",
         "schema": {
@@ -618,15 +603,3 @@ def to_mcp_tools() -> list[Tool]:
     ]
 
 
-def to_openai_tools() -> list[dict]:
-    return [
-        {
-            "type": "function",
-            "function": {
-                "name": t["name"],
-                "description": t["description"],
-                "parameters": t["schema"],
-            },
-        }
-        for t in TOOL_REGISTRY
-    ]

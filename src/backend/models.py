@@ -126,20 +126,30 @@ class CreateTopicRequest(BaseModel):
 class UpdateTopicRequest(BaseModel):
     name: str | None = None
     description: str | None = None
+    cluster_id: int | None = None
+    default_curriculum_id: int | None = None
 
 
-# --- Community ---
-class ShareCurriculumRequest(BaseModel):
-    curriculum_id: int
-    title: str
+# --- Cluster ---
+class CreateClusterRequest(BaseModel):
+    name: str
     description: str = ""
-    subject: str = ""
-    tags: str = ""
 
 
-class ForkCurriculumRequest(BaseModel):
-    topic_id: int
+class UpdateClusterRequest(BaseModel):
+    name: str | None = None
+    description: str | None = None
 
 
-class UpvoteRequest(BaseModel):
-    voter_id: str = "anonymous"
+# --- Sketch ---
+class CreateSketchRequest(BaseModel):
+    title: str = ""
+    content: str = ""
+
+
+class UpdateSketchRequest(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    claude_session_id: str | None = None
+
+

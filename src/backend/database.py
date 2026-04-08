@@ -2,11 +2,22 @@ import aiosqlite
 from pathlib import Path
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS clusters (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT DEFAULT '',
+    order_num INTEGER DEFAULT 0,
+    is_default INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS topics (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
     description TEXT,
-    container_name TEXT NOT NULL
+    container_name TEXT NOT NULL,
+    cluster_id INTEGER REFERENCES clusters(id),
+    default_curriculum_id INTEGER REFERENCES curricula(id)
 );
 
 CREATE TABLE IF NOT EXISTS curricula (
@@ -96,26 +107,13 @@ CREATE TABLE IF NOT EXISTS knowledge (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS shared_curricula (
+CREATE TABLE IF NOT EXISTS sketches (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL DEFAULT 1,
-    curriculum_id INTEGER REFERENCES curricula(id),
-    title TEXT NOT NULL,
-    description TEXT DEFAULT '',
-    subject TEXT DEFAULT '',
-    tags TEXT DEFAULT '',
-    snapshot TEXT NOT NULL,
-    upvotes INTEGER DEFAULT 0,
-    downloads INTEGER DEFAULT 0,
-    shared_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS community_votes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    shared_curriculum_id INTEGER NOT NULL REFERENCES shared_curricula(id) ON DELETE CASCADE,
-    voter_id TEXT NOT NULL DEFAULT 'anonymous',
+    title TEXT NOT NULL DEFAULT '',
+    content TEXT NOT NULL DEFAULT '',
+    claude_session_id TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(shared_curriculum_id, voter_id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """
 
@@ -152,11 +150,42 @@ async def init_db(db_path: str) -> None:
             ("ui_type", "ALTER TABLE exercises ADD COLUMN ui_type TEXT NOT NULL DEFAULT 'auto'"),
             ("session_id", "ALTER TABLE chat_messages ADD COLUMN session_id INTEGER REFERENCES chat_sessions(id)"),
             ("cur_session_id", "ALTER TABLE curricula ADD COLUMN session_id INTEGER REFERENCES chat_sessions(id)"),
+            ("topic_cluster_id", "ALTER TABLE topics ADD COLUMN cluster_id INTEGER REFERENCES clusters(id)"),
+            ("topic_default_curriculum_id", "ALTER TABLE topics ADD COLUMN default_curriculum_id INTEGER REFERENCES curricula(id)"),
         ]:
             try:
                 await db.execute(sql)
             except Exception:
                 pass
+
+        # 기본 cluster 보장 + cluster_id가 NULL인 토픽들을 기본 cluster에 할당
+        cur = await db.execute("SELECT id FROM clusters WHERE is_default = 1 LIMIT 1")
+        row = await cur.fetchone()
+        if row is None:
+            cur = await db.execute(
+                "INSERT INTO clusters (name, description, is_default) VALUES (?, ?, 1)",
+                ("기본값", "분류되지 않은 토픽"),
+            )
+            default_cluster_id = cur.lastrowid
+        else:
+            default_cluster_id = row[0]
+
+        await db.execute(
+            "UPDATE topics SET cluster_id = ? WHERE cluster_id IS NULL",
+            (default_cluster_id,),
+        )
+
+        # 각 topic의 default_curriculum_id가 NULL이면 첫 번째 curriculum으로 자동 설정
+        await db.execute(
+            """
+            UPDATE topics
+            SET default_curriculum_id = (
+                SELECT MIN(id) FROM curricula WHERE curricula.topic_id = topics.id
+            )
+            WHERE default_curriculum_id IS NULL
+            """
+        )
+
         await db.commit()
 
 

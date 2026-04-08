@@ -13,8 +13,6 @@ dependencies = [
     "python-multipart>=0.0.18",
     "websockets>=15.0",
     "mcp[cli]>=1.0",
-    "openai>=1.50",
-    "anthropic>=0.89.0",
 ]
 
 [tool.uv]

@@ -1,8 +1,8 @@
-import { Home, GraduationCap, Layers, Compass, Settings, Sun, Moon, User } from "lucide-react";
+import { Home, GraduationCap, Layers, Compass, Settings, Sun, Moon, PenLine } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useTheme } from "../stores/theme";
 
-export type ViewType = "home" | "learn" | "subjects" | "community";
+export type ViewType = "home" | "sketch" | "learn" | "subjects" | "explore";
 
 interface IconNavProps {
   activeView: ViewType;
@@ -12,9 +12,10 @@ interface IconNavProps {
 
 const navItems: { view: ViewType; icon: typeof Home; label: string }[] = [
   { view: "home", icon: Home, label: "Home" },
+  { view: "sketch", icon: PenLine, label: "Sketch" },
   { view: "learn", icon: GraduationCap, label: "Learn" },
   { view: "subjects", icon: Layers, label: "Topics" },
-  { view: "community", icon: Compass, label: "Explore" },
+  { view: "explore", icon: Compass, label: "Explore" },
 ];
 
 export default function IconNav({ activeView, onViewChange, className }: IconNavProps) {
@@ -65,13 +66,6 @@ export default function IconNav({ activeView, onViewChange, className }: IconNav
       >
         {dark ? <Sun size={22} /> : <Moon size={22} />}
         <span className="text-[10px] font-medium leading-none">{dark ? "Light" : "Dark"}</span>
-      </button>
-
-      <button
-        className="mt-1 flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-        title="Sign in"
-      >
-        <User size={18} />
       </button>
     </div>
   );

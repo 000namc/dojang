@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from src.backend.config import get_settings
 from src.backend.database import init_db
 from src.backend.seed import seed_if_empty
-from src.backend.routers import topics, curriculum, exercises, terminal, knowledge, chat, community
+from src.backend.routers import topics, curriculum, exercises, terminal, knowledge, knowledge_graph, sketches, clusters
 
 
 @asynccontextmanager
@@ -38,8 +38,9 @@ app.include_router(curriculum.router)
 app.include_router(exercises.router)
 app.include_router(terminal.router)
 app.include_router(knowledge.router)
-app.include_router(chat.router)
-app.include_router(community.router)
+app.include_router(knowledge_graph.router)
+app.include_router(sketches.router)
+app.include_router(clusters.router)
 
 
 @app.get("/health")
@@ -48,6 +49,7 @@ async def health():
 
 
 NOTIFY_FILE = Path(__file__).parent.parent.parent / "data" / ".notify"
+CONTEXT_FILE = Path(__file__).parent.parent.parent / "data" / "current_context.md"
 
 
 @app.get("/api/notify")
@@ -61,6 +63,20 @@ async def get_notify(since: float = 0):
         except (json.JSONDecodeError, KeyError):
             pass
     return {"event": None, "ts": time.time()}
+
+
+@app.get("/api/context")
+async def get_context():
+    if CONTEXT_FILE.exists():
+        return {"content": CONTEXT_FILE.read_text()}
+    return {"content": ""}
+
+
+@app.put("/api/context")
+async def put_context(body: dict):
+    CONTEXT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CONTEXT_FILE.write_text(body.get("content", ""))
+    return {"status": "ok"}
 
 
 # SPA fallback

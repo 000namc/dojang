@@ -6,13 +6,11 @@ import {
   Circle,
   BookOpen,
   Trash2,
-  Share2,
   X,
   MoreHorizontal,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
-import { useCommunity } from "../stores/community";
 import type { Subject, TopicItem, CurriculumTree } from "../types";
 
 export default function CurriculumSidebar({ className }: { className?: string }) {
@@ -34,19 +32,8 @@ export default function CurriculumSidebar({ className }: { className?: string })
     selectExercise,
     selectCard,
   } = useStore();
-  const communityStore = useCommunity();
 
   useEffect(() => { loadTopics(); }, []);
-
-  const handleShare = (cur: { id: number; name: string }) => {
-    communityStore.share({
-      curriculum_id: cur.id,
-      title: cur.name,
-      description: "",
-      subject: currentTopic?.name,
-      tags: "",
-    });
-  };
 
   return (
     <div className={cn("flex flex-col bg-white dark:bg-gray-900 overflow-hidden", className)}>
@@ -75,7 +62,6 @@ export default function CurriculumSidebar({ className }: { className?: string })
             isActive={cur.id === currentCurriculumId}
             onSelect={() => selectCurriculum(cur.id)}
             onDelete={!cur.is_default ? () => { if (confirm(`"${cur.name}" 삭제?`)) deleteCurriculum(cur.id); } : undefined}
-            onShare={() => handleShare(cur)}
             curriculumTree={cur.id === currentCurriculumId ? curriculumTree : null}
             selectedExerciseId={selectedExerciseId}
             selectedCardId={selectedCardId}
@@ -99,7 +85,6 @@ function CurriculumSection({
   isActive,
   onSelect,
   onDelete,
-  onShare,
   curriculumTree,
   selectedExerciseId,
   selectedCardId,
@@ -113,7 +98,6 @@ function CurriculumSection({
   isActive: boolean;
   onSelect: () => void;
   onDelete?: () => void;
-  onShare?: () => void;
   curriculumTree: CurriculumTree | null;
   selectedExerciseId: number | null;
   selectedCardId: number | null;
@@ -149,15 +133,6 @@ function CurriculumSection({
           {expanded ? <ChevronDown size={13} className="shrink-0 text-gray-400" /> : <ChevronRight size={13} className="shrink-0 text-gray-400" />}
           <span className="truncate">{curriculum.name}</span>
         </button>
-        {onShare && (
-          <button
-            onClick={onShare}
-            className="rounded p-0.5 text-gray-400 hover:text-primary-500 opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Share to community"
-          >
-            <Share2 size={12} />
-          </button>
-        )}
         {onDelete && (
           <button
             onClick={onDelete}

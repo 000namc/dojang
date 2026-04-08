@@ -23,7 +23,6 @@ export default function SidePanel({ activeView, isOpen, className }: SidePanelPr
       {activeView === "home" && <ChatSessions />}
       {/* Learn은 자체 CurriculumSidebar 사용 */}
       {activeView === "subjects" && <SubjectsList />}
-      {activeView === "community" && <CommunityFilters />}
     </div>
   );
 }
@@ -102,29 +101,3 @@ function SubjectsList() {
   );
 }
 
-function CommunityFilters() {
-  return (
-    <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-gray-100 dark:border-gray-800">
-        <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            placeholder="Search community..."
-            className="w-full rounded-lg bg-gray-50 dark:bg-gray-800 border-0 pl-8 pr-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary-500"
-          />
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-        <div className="px-2 py-1.5 text-[11px] font-medium text-gray-400 uppercase tracking-wide">Categories</div>
-        {["All", "CLI", "Git", "Docker", "SQL", "ML"].map((cat) => (
-          <button
-            key={cat}
-            className="flex items-center gap-2 w-full rounded-lg px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
