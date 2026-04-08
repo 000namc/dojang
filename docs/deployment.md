@@ -1,87 +1,74 @@
-# 서비스 배포 가이드
+# Deployment
 
-## 인프라 구성
+Dojang은 기본적으로 **자기 머신에서 직접 돌리는 개인 학습 도구**다. 외부 AI API 의존이 없어서 누구의 서버에도 데이터를 보내지 않는다. 따라서 별도의 배포가 없어도 `docker compose up -d` 한 줄로 끝난다. 이 문서는 굳이 원격 서버나 도메인에 띄우고 싶을 때를 위한 가이드다.
 
-```
-[사용자] → https://dojang.your-domain.com
-              ↓ (Cloudflare Tunnel)
-        [Oracle Cloud ARM VM]
-              ├── dojang-app (FastAPI + React)
-              ├── dojang-cli (sandbox)
-              ├── dojang-git (sandbox)
-              ├── dojang-docker (sandbox)
-              ├── dojang-sql (MySQL sandbox)
-              └── cloudflared (tunnel daemon)
+## 가장 간단한 셋업 (로컬, 추천)
+
+```bash
+git clone https://github.com/000namc/dojang.git && cd dojang
+cp .env.example .env
+cd build && docker compose --profile prod up -d
 ```
 
-## 월 비용 추정
+→ http://localhost:8010 . 끝.
+
+## 원격 서버에 띄우고 싶다면
+
+```
+[로컬 브라우저] → https://dojang.example.com
+                     ↓ (Cloudflare Tunnel)
+              [Oracle Cloud ARM VM 등]
+                     ├── dojang-app (FastAPI + React)
+                     ├── dojang-cli / git / docker / sql / python (도메인 컨테이너)
+                     └── cloudflared
+```
+
+비용은 사실상 도메인 비용 정도. **OpenAI/Anthropic API 비용이 0원** 이라는 게 핵심.
 
 | 항목 | 비용 |
 |------|------|
-| Oracle Cloud (ARM 4코어/24GB) | $0 (영구 무료) |
+| Oracle Cloud (ARM 4코어/24GB) | $0 (영구 무료 등급) |
 | Cloudflare Tunnel + HTTPS | $0 |
 | 도메인 (.com) | ~$1/월 |
-| OpenAI API (GPT-4.1 mini) | ~$5~20 (사용량 비례) |
-| Anthropic API (Haiku 4.5) | ~$5~10 (사용량 비례) |
-| **합계** | **~$11~31/월** |
+| **Claude Code 사용료** | 사용자 본인의 Claude 구독 (Pro/Max) — 머신에 설치된 CLI가 알아서 처리 |
+| **합계** | **~$1/월** |
 
-## 1단계: Oracle Cloud 셋업
+## 서버 셋업
 
-### VM 생성
+### Oracle Cloud (예시)
 
-1. [Oracle Cloud](https://cloud.oracle.com) 가입 (신용카드 필요, 과금 없음)
-2. Compute → Create Instance
+1. [Oracle Cloud](https://cloud.oracle.com) → Compute → Create Instance
    - Shape: **VM.Standard.A1.Flex** (ARM)
-   - OCPU: 4, Memory: 24GB
-   - OS: Ubuntu 22.04 (ARM)
-   - Boot volume: 100GB
-3. Security List에서 인바운드 규칙은 건들지 않음 (cloudflared가 아웃바운드로 연결)
-
-### 서버 초기 설정
+   - OCPU: 4, Memory: 24GB, Boot 100GB
+   - OS: Ubuntu 22.04
+2. SSH 접속
 
 ```bash
-# SSH 접속
-ssh -i <key> ubuntu@<public-ip>
-
 # Docker 설치
 curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-newgrp docker
+sudo usermod -aG docker $USER && newgrp docker
 
-# Docker Compose 설치
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+# Claude Code 설치 (서버에서 사용할 거면)
+# → Claude 공식 가이드 참고
 
-# 프로젝트 클론
-git clone https://github.com/000namc/dojang.git
-cd dojang
+# 프로젝트
+git clone https://github.com/000namc/dojang.git && cd dojang
+cp .env.example .env
+cd build && docker compose --profile prod up -d
 ```
 
-## 2단계: Cloudflare Tunnel 설정
+> 주의: Claude Code 세션이 서버에서 동작하려면 서버 머신 안에 `claude` CLI 가 설치되어 있어야 한다. 인증도 서버 안에서 한 번 해주어야 함 (`claude` 실행 후 안내에 따라).
 
-### 도메인 준비
-
-1. 도메인 구매 (Cloudflare Registrar 또는 외부)
-2. Cloudflare에 도메인 추가, 네임서버 변경
-
-### Tunnel 생성
+### Cloudflare Tunnel로 도메인 노출
 
 ```bash
-# cloudflared 설치 (ARM)
 curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 -o /usr/local/bin/cloudflared
 chmod +x /usr/local/bin/cloudflared
 
-# 로그인 (브라우저에서 인증)
 cloudflared tunnel login
-
-# 터널 생성
 cloudflared tunnel create dojang
-
-# DNS 레코드 연결
 cloudflared tunnel route dns dojang dojang.your-domain.com
 ```
-
-### Tunnel 설정 파일
 
 ```yaml
 # ~/.cloudflared/config.yml
@@ -94,108 +81,47 @@ ingress:
   - service: http_status:404
 ```
 
-### systemd 서비스 등록
-
 ```bash
 sudo cloudflared service install
-sudo systemctl enable cloudflared
-sudo systemctl start cloudflared
+sudo systemctl enable --now cloudflared
 ```
 
-## 3단계: 앱 배포
+## 운영
 
-### 환경 변수
-
-```bash
-# .env 파일 생성
-cat > .env << 'EOF'
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-EOF
-```
-
-### Docker Compose로 실행
+### 업데이트
 
 ```bash
-cd build
-docker compose --profile prod up -d
-```
-
-### 확인
-
-```bash
-# 컨테이너 상태
-docker compose ps
-
-# 앱 로그
-docker compose logs -f app
-
-# 터널 상태
-sudo systemctl status cloudflared
-
-# 접속 테스트
-curl https://dojang.your-domain.com/health
-```
-
-## 4단계: 운영
-
-### 업데이트 배포
-
-```bash
-cd ~/dojang
-git pull
-cd build
-docker compose --profile prod build app
-docker compose --profile prod up -d app
+cd ~/dojang && git pull
+cd build && docker compose --profile prod build app && docker compose --profile prod up -d app
 ```
 
 ### 데이터 백업
 
+`data/dojang.db` 만 백업하면 학습 이력 / sketch / 시도가 모두 보존된다.
+
 ```bash
-# SQLite DB 백업 (cron으로 일일 실행)
+# 일일 cron 예시
 docker cp dojang-app:/app/data/dojang.db ~/backups/dojang-$(date +%Y%m%d).db
 ```
 
 ### 모니터링
 
 ```bash
-# 디스크 사용량
+docker compose ps
+docker compose logs --tail 50 app
 df -h
-
-# 컨테이너 리소스
 docker stats --no-stream
-
-# 앱 로그 (최근 에러)
-docker compose logs --tail 50 app | grep -i error
 ```
 
-## TODO: 서비스화 체크리스트
+## 외부 공개로 갈 경우 — 체크리스트
 
-### 필수 (서비스 전)
+순수 개인 도구로 쓰는 경우라면 모두 무시해도 된다. 여러 사용자에게 공개하려면 다음이 추가로 필요하다.
 
-- [ ] **인증 시스템** — Google + Kakao OAuth
-  - NextAuth.js 또는 FastAPI + authlib
-  - users 테이블 추가
-  - 세션/토큰 관리
-- [ ] **DB 마이그레이션** — 멀티유저 지원
-  - 모든 테이블에 user_id 컬럼 추가
-  - 데이터 격리 (유저별 커리큘럼, 채팅)
-- [ ] **API 사용량 제한**
-  - 일일 채팅 횟수 제한 (무료: 20회, 유료: 무제한)
-  - rate limiting (FastAPI middleware)
-- [ ] **샌드박스 보안**
-  - 명령어 타임아웃 (30초)
-  - 위험 명령어 차단 (`rm -rf /`, `shutdown` 등)
-  - 컨테이너 리소스 제한 (CPU, 메모리)
-  - 주기적 컨테이너 리셋 (매일 새벽)
+- **인증** — Google/Kakao OAuth (현재 dojang은 single-user 가정)
+- **유저별 데이터 격리** — 모든 테이블에 `user_id` 추가, sketch/학습 이력 분리
+- **샌드박스 보안** — 도메인 컨테이너 자원 제한, 위험 명령 차단, 주기적 reset
+- **레이트 리밋** — 컨테이너 실행 / Claude 호출 횟수 제한
+- **DB 전환** — SQLite → PostgreSQL (동시 유저 늘어날 경우)
+- **에러 추적** — Sentry 등
 
-### 권장 (서비스 후)
-
-- [ ] **과금 시스템** — Stripe 연동
-  - Free: 일 20회 채팅, 커리큘럼 3개
-  - Pro ($10/월): 무제한 채팅, 커리큘럼 무제한
-- [ ] **에러 추적** — Sentry 연동
-- [ ] **사용량 대시보드** — 관리자용
-- [ ] **컨테이너 격리 강화** — 유저별 namespace 또는 gVisor
-- [ ] **CDN** — 정적 파일 Cloudflare 캐싱
-- [ ] **DB 전환** — SQLite → PostgreSQL (유저 100+ 시)
+이 부분은 dojang의 본래 설계 범위(개인 도구) 밖이라 PR로 기여를 받는 게 더 자연스럽다.

@@ -2,7 +2,8 @@ __pycache__/
 *.pyc
 .venv/
 .env
-data/
+data/*
+!data/.gitkeep
 node_modules/
 **/dist/
 static/
@@ -10,3 +11,4 @@ static/
 *.egg-info/
 .claude/
 package-lock.json
+opencode.json
