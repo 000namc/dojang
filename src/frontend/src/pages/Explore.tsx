@@ -870,23 +870,28 @@ function GlowLayer() {
     let raf = 0;
     let running = true;
 
-    // 노드별 깜빡임 phase / period 는 id 해시 기반 (재현 가능)
+    // 노드별 깜빡임 phase / period 는 id 해시 기반 (재현 가능).
+    // golden ratio prime 곱으로 해시 분산을 개선해 별마다 타이밍이 더 잘 흩어지게 한다.
+    const GOLDEN = 2654435769;
     const phaseFor = (id: string): number => {
-      let h = 0;
-      for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-      return (h % 1000) / 1000;
+      let h = 0x811c9dc5;
+      for (let i = 0; i < id.length; i++) h = ((h ^ id.charCodeAt(i)) * 16777619) >>> 0;
+      h = (h * GOLDEN) >>> 0;
+      return h / 0x100000000; // 0 ~ 1
     };
-    // 1차 주기 (느린 호흡)
+    // 1차 주기 (호흡) — 별마다 1.5~10초로 매우 다르게: 빠른 맥박/긴 호흡 대비가 명확
     const periodFor = (id: string): number => {
-      let h = 0;
-      for (let i = 0; i < id.length; i++) h = (h * 17 + id.charCodeAt(i)) >>> 0;
-      return 2000 + (h % 4000); // 2–6 초 — 범위 넓혀서 별마다 편차 더 큰 호흡
+      let h = 0x9e3779b1;
+      for (let i = 0; i < id.length; i++) h = ((h ^ id.charCodeAt(i)) * 16777619) >>> 0;
+      h = (h * GOLDEN) >>> 0;
+      return 1500 + (h % 8500);
     };
-    // 2차 주기 (빠른 미세 떨림) — 1차의 비정수 배율이라 beat 가 생김
+    // 2차 주기 (미세 떨림) — 0.4~2초. 전체 밝기 기여는 작음
     const period2For = (id: string): number => {
-      let h = 0;
-      for (let i = 0; i < id.length; i++) h = (h * 13 + id.charCodeAt(i)) >>> 0;
-      return 600 + (h % 900); // 0.6–1.5 초
+      let h = 0x7a5f3c1b;
+      for (let i = 0; i < id.length; i++) h = ((h ^ id.charCodeAt(i)) * 16777619) >>> 0;
+      h = (h * GOLDEN) >>> 0;
+      return 400 + (h % 1600);
     };
 
     const renderFrame = () => {
@@ -919,14 +924,15 @@ function GlowLayer() {
           return;
         const view = sigma.graphToViewport({ x: attrs.x as number, y: attrs.y as number });
 
-        // 깜빡임 — 두 주기의 사인파 합성으로 불규칙하게 어두워졌다 밝아짐
+        // 깜빡임 — 1차 주기 (호흡) 가 dominant, 2차는 미세 떨림 (jitter)
         const period = periodFor(nodeId);
         const period2 = period2For(nodeId);
-        const phase = phaseFor(nodeId) * Math.PI * 2;
-        const wave1 = 0.5 + 0.5 * Math.sin((now / period) * Math.PI * 2 + phase);
-        const wave2 = 0.5 + 0.5 * Math.sin((now / period2) * Math.PI * 2 + phase * 1.7);
-        const combined = wave1 * 0.65 + wave2 * 0.35;
-        // 범위 0.35 ~ 1.0 — 항상 어느 정도 밝기 유지하되, peak 에서 확 밝아짐
+        const phaseBase = phaseFor(nodeId) * Math.PI * 2;
+        // 1차/2차 phase 를 서로 다르게 섞어서 peak 타이밍 상관관계 낮춤
+        const wave1 = 0.5 + 0.5 * Math.sin((now / period) * Math.PI * 2 + phaseBase);
+        const jitter = 0.5 + 0.5 * Math.sin((now / period2) * Math.PI * 2 + phaseBase * 2.3 + 1.7);
+        const combined = wave1 * 0.85 + jitter * 0.15;
+        // 범위 0.35 ~ 1.0
         const twinkle = 0.35 + 0.65 * combined;
 
         const baseSize = kind === "topic" ? 50 : kind === "subject" ? 22 : 8;
