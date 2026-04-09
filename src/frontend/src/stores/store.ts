@@ -97,7 +97,7 @@ interface DojangState {
       name?: string;
       description?: string;
       cluster_id?: number;
-      default_curriculum_id?: number;
+      default_curriculum_id?: number | null;
     },
   ) => Promise<void>;
   deleteTopic: (id: number) => Promise<void>;

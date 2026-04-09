@@ -62,12 +62,17 @@ export default function CurriculumSidebar({ className }: { className?: string })
             curriculum={cur}
             isActive={cur.id === currentCurriculumId}
             isDefault={currentTopic?.default_curriculum_id === cur.id}
-            onSelect={() => selectCurriculum(cur.id)}
-            onSetDefault={
+            onToggleDefault={
               currentTopic
-                ? () => updateTopic(currentTopic.id, { default_curriculum_id: cur.id })
+                ? () =>
+                    updateTopic(currentTopic.id, {
+                      // 노란 별 다시 클릭 → 해제 (null) → Explore 별자리에서 토픽이 사라짐
+                      default_curriculum_id:
+                        currentTopic.default_curriculum_id === cur.id ? null : cur.id,
+                    })
                 : undefined
             }
+            onSelect={() => selectCurriculum(cur.id)}
             onDelete={!cur.is_default ? () => { if (confirm(`"${cur.name}" 삭제?`)) deleteCurriculum(cur.id); } : undefined}
             curriculumTree={cur.id === currentCurriculumId ? curriculumTree : null}
             selectedExerciseId={selectedExerciseId}
@@ -92,7 +97,7 @@ function CurriculumSection({
   isActive,
   isDefault,
   onSelect,
-  onSetDefault,
+  onToggleDefault,
   onDelete,
   curriculumTree,
   selectedExerciseId,
@@ -107,7 +112,7 @@ function CurriculumSection({
   isActive: boolean;
   isDefault: boolean;
   onSelect: () => void;
-  onSetDefault?: () => void;
+  onToggleDefault?: () => void;
   onDelete?: () => void;
   curriculumTree: CurriculumTree | null;
   selectedExerciseId: number | null;
@@ -144,13 +149,17 @@ function CurriculumSection({
           {expanded ? <ChevronDown size={13} className="shrink-0 text-gray-400" /> : <ChevronRight size={13} className="shrink-0 text-gray-400" />}
           <span className="truncate">{curriculum.name}</span>
         </button>
-        {onSetDefault && (
+        {onToggleDefault && (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (!isDefault) onSetDefault();
+              onToggleDefault();
             }}
-            title={isDefault ? "현재 기본 커리큘럼" : "기본 커리큘럼으로 설정"}
+            title={
+              isDefault
+                ? "기본 커리큘럼 해제 (별자리에서 숨김)"
+                : "기본 커리큘럼으로 설정"
+            }
             className="mr-1 rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <Star
@@ -158,7 +167,7 @@ function CurriculumSection({
               className={cn(
                 "transition-colors",
                 isDefault
-                  ? "fill-yellow-400 text-yellow-400"
+                  ? "fill-yellow-400 text-yellow-400 hover:fill-yellow-300 hover:text-yellow-300"
                   : "text-gray-300 dark:text-gray-600 hover:text-yellow-400",
               )}
             />

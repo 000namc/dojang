@@ -196,7 +196,8 @@ export async function updateTopic(
     name?: string;
     description?: string;
     cluster_id?: number;
-    default_curriculum_id?: number;
+    // null 명시 = 기본 커리큘럼 해제 (Explore 별자리에서 토픽이 사라짐)
+    default_curriculum_id?: number | null;
   },
 ): Promise<void> {
   await api.put(`/api/topics/${id}`, updates);

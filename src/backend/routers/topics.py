@@ -55,18 +55,23 @@ async def create_topic(req: CreateTopicRequest, db: aiosqlite.Connection = Depen
 
 @router.put("/topics/{topic_id}")
 async def update_topic(topic_id: int, req: UpdateTopicRequest, db: aiosqlite.Connection = Depends(get_db)):
-    updates = []
+    # default_curriculum_id 는 null 로 set 가능 (= 별자리에서 토픽 숨김).
+    # "필드 자체가 absent" 와 "필드가 명시적으로 null" 을 구분하기 위해
+    # Pydantic V2 의 model_fields_set 을 사용한다.
+    fields_set = req.model_fields_set
+    updates: list[str] = []
     values: list = []
-    if req.name is not None:
+    if "name" in fields_set and req.name is not None:
         updates.append("name = ?")
         values.append(req.name)
-    if req.description is not None:
+    if "description" in fields_set and req.description is not None:
         updates.append("description = ?")
         values.append(req.description)
-    if req.cluster_id is not None:
+    if "cluster_id" in fields_set and req.cluster_id is not None:
         updates.append("cluster_id = ?")
         values.append(req.cluster_id)
-    if req.default_curriculum_id is not None:
+    if "default_curriculum_id" in fields_set:
+        # null 도 명시적 unset 으로 받아들임
         updates.append("default_curriculum_id = ?")
         values.append(req.default_curriculum_id)
 

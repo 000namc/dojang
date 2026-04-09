@@ -54,6 +54,14 @@ async def seed_if_empty(db_path: str) -> None:
             )
             curriculum_id = cursor.lastrowid
 
+            # 시드 시점에 default_curriculum_id 를 직접 set — backfill_defaults 는
+            # 더 이상 이 필드를 안 채우므로, 여기서 채우지 않으면 NULL 로 남아
+            # Explore 에서 안 보이게 됨.
+            await db.execute(
+                "UPDATE topics SET default_curriculum_id = ? WHERE id = ?",
+                (curriculum_id, topic_id),
+            )
+
             for subject_data in curriculum.get("topics", []):
                 await _insert_subject(db, curriculum_id, subject_data, parent_id=None, topic_id=topic_id)
 

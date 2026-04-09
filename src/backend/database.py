@@ -162,16 +162,17 @@ async def init_db(db_path: str) -> None:
 
 
 async def backfill_defaults(db_path: str) -> None:
-    """seed 후 NULL 인 cluster_id / default_curriculum_id 를 기본값으로 채운다.
+    """기본 cluster 보장 + cluster_id 가 NULL 인 토픽을 기본 cluster 로 fallback.
 
-    init_db 직후 비어 있는 DB 에서 호출되면 아무 일도 하지 않고,
-    seed_if_empty 가 토픽/커리큘럼을 채워 넣은 직후 호출되면 그 토픽들에
-    기본 cluster 와 기본 curriculum 을 연결한다.
+    매 부팅마다 호출되지만 default_curriculum_id 는 건드리지 않는다 — 사용자가
+    Learn 사이드바에서 별을 토글해 명시적으로 unset 한 토픽이 다음 부팅에
+    자동으로 복원되면 안 되기 때문. 시드 시점의 default_curriculum_id 는
+    seed_if_empty() 안에서 직접 설정한다.
     """
     async with aiosqlite.connect(db_path) as db:
         db.row_factory = aiosqlite.Row
 
-        # 기본 cluster 보장 + cluster_id가 NULL인 토픽들을 기본 cluster에 할당
+        # 기본 cluster 보장 + cluster_id 가 NULL 인 토픽들을 기본 cluster 에 할당
         cur = await db.execute("SELECT id FROM clusters WHERE is_default = 1 LIMIT 1")
         row = await cur.fetchone()
         if row is None:
@@ -186,17 +187,6 @@ async def backfill_defaults(db_path: str) -> None:
         await db.execute(
             "UPDATE topics SET cluster_id = ? WHERE cluster_id IS NULL",
             (default_cluster_id,),
-        )
-
-        # 각 topic의 default_curriculum_id가 NULL이면 첫 번째 curriculum으로 자동 설정
-        await db.execute(
-            """
-            UPDATE topics
-            SET default_curriculum_id = (
-                SELECT MIN(id) FROM curricula WHERE curricula.topic_id = topics.id
-            )
-            WHERE default_curriculum_id IS NULL
-            """
         )
 
         await db.commit()
