@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import ExercisePanel from "../components/ExercisePanel";
 import KnowledgePanel from "../components/KnowledgePanel";
+import HelpBanner from "../components/HelpBanner";
 import { useStore } from "../stores/store";
 import { cn } from "../lib/cn";
 
@@ -24,6 +25,11 @@ export default function Learn({ className }: LearnProps) {
 
       {/* Center: Content area */}
       <div className="flex-1 flex flex-col min-w-0">
+        <div className="px-4 pt-3">
+          <HelpBanner storageKey="learn">
+            왼쪽에서 커리큘럼을 고르면 그 안의 주제 · 노트 · 실습이 트리로 펼쳐집니다. 커리큘럼 옆 ★ 로 기본을 토글할 수 있고, 해제하면 그 토픽이 Explore 별자리에서 사라져요.
+          </HelpBanner>
+        </div>
         {selectedItemType === "exercise" ? (
           <ExercisePanel />
         ) : selectedItemType === "knowledge" ? (

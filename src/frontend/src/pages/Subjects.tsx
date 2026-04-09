@@ -13,6 +13,7 @@ import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
 import * as api from "../api/client";
 import type { Cluster } from "../api/client";
+import HelpBanner from "../components/HelpBanner";
 
 interface SubjectsProps {
   className?: string;
@@ -218,7 +219,10 @@ export default function Subjects({ className, onNavigateToLearn }: SubjectsProps
   return (
     <div className={cn("h-full overflow-y-auto bg-white dark:bg-gray-900", className)}>
       <div className="max-w-5xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Topics</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">Topics</h1>
+        <HelpBanner storageKey="topics" className="mb-6">
+          Cluster 헤더를 잡고 드래그해서 순서를 바꾸고, 토픽 카드를 다른 cluster 본문으로 끌어서 이동하세요. 맨 아래 <strong>Cluster 추가</strong> 로 새 그룹을 만들 수 있고, 각 cluster 의 ▸ 로 접을 수 있습니다.
+        </HelpBanner>
 
         <div className="space-y-4">
           {clusters.map((c) => {

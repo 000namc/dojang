@@ -3,6 +3,7 @@ import { Plus, Trash2, FileText } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useSketches } from "../stores/sketches";
 import TerminalPanel from "../components/TerminalPanel";
+import HelpBanner from "../components/HelpBanner";
 
 interface SketchProps {
   className?: string;
@@ -109,6 +110,11 @@ export default function Sketch({ className }: SketchProps) {
 
       {/* Center: editor */}
       <div className="flex-1 flex flex-col min-w-0">
+        <div className="px-4 pt-3">
+          <HelpBanner storageKey="sketch">
+            왼쪽에서 sketch 를 고르고 가운데에 자유롭게 메모하세요. 오른쪽 Claude 터미널은 이 sketch 만의 세션으로 영속됩니다 — 다시 열면 대화 맥락 그대로 이어집니다.
+          </HelpBanner>
+        </div>
         {current ? (
           <>
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-4 py-2">

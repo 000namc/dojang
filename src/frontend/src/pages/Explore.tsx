@@ -9,6 +9,7 @@ import "@react-sigma/core/lib/style.css";
 import Graph from "graphology";
 import { cn } from "../lib/cn";
 import { getKnowledgeGraph, type KGNode } from "../api/client";
+import HelpBanner from "../components/HelpBanner";
 
 interface ExploreProps {
   className?: string;
@@ -973,6 +974,15 @@ export default function Explore({ className }: ExploreProps) {
             <GlowLayer />
           </SigmaContainer>
         </>
+      )}
+
+      {/* 도움말 — 맨 위 중앙 overlay */}
+      {!loading && data.nodes.length > 0 && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[min(640px,calc(100%-2rem))]">
+          <HelpBanner storageKey="explore">
+            토픽을 드래그하면 주변 별이 자석처럼 따라와서 별자리 배치를 다시 잡을 수 있어요. 좌상단 단축키로 라벨 / 셔플 / 이동 모드를 조절합니다.
+          </HelpBanner>
+        </div>
       )}
 
       {/* 단축키 인디케이터 */}
