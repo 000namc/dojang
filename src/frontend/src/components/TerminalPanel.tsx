@@ -233,7 +233,7 @@ export default function TerminalPanel({
           {/* Doc reference */}
           {contextRef && (
             <span className="inline-flex items-center gap-1 rounded bg-blue-900/30 border border-blue-800 px-1.5 py-0.5 text-[11px] text-blue-400 font-mono">
-              @{contextRef.type === "exercise" ? "exercise" : "knowledge"}:{contextRef.title}
+              @{contextRef.type}:{contextRef.title}
             </span>
           )}
 

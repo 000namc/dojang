@@ -47,7 +47,7 @@ interface DojangState {
   isEditingCard: boolean;
 
   // Agent context (synced to data/current_context.md)
-  contextRef: { type: "exercise" | "knowledge"; id: number; title: string } | null;
+  contextRef: { type: "exercise" | "knowledge" | "sketch"; id: number; title: string } | null;
   contextSnippets: { id: string; lineStart?: number; lineEnd?: number; text: string }[];
 
   // Chat context snippets (legacy — kept for ChatPanel)

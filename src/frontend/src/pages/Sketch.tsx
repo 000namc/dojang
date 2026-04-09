@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, FileText } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useSketches } from "../stores/sketches";
+import { useStore } from "../stores/store";
 import { putContext } from "../api/client";
 import TerminalPanel from "../components/TerminalPanel";
 
@@ -37,10 +38,12 @@ export default function Sketch({ className }: SketchProps) {
     };
   }, []);
 
-  // 현재 sketch 가 바뀌면 그 내용을 current_context.md 로 sync
+  // 현재 sketch 가 바뀌면 context chip + current_context.md 둘 다 세팅
+  const setStore = useStore.setState;
   useEffect(() => {
     if (current) {
       const title = deriveTitle(current.content, current.title);
+      setStore({ contextRef: { type: "sketch", id: current.id, title }, contextSnippets: [] });
       putContext(`@sketch:${title} #${current.id}\n\n${current.content}`).catch(() => {});
     }
   }, [current?.id]);
