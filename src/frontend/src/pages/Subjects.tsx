@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Trash2, ArrowRight, FolderPlus, Folder } from "lucide-react";
+import { Plus, Pencil, Trash2, ArrowRight, FolderPlus, Folder, ChevronDown } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
 import * as api from "../api/client";
@@ -364,7 +364,7 @@ export default function Subjects({ className, onNavigateToLearn }: SubjectsProps
   );
 }
 
-// ── Topic 카드 헤더 위 cluster eyebrow — uppercase 작은 라벨, 카드 본문의 일부처럼 ──
+// ── Topic 카드 헤더 위 cluster eyebrow — Folder + uppercase, 카드 본문의 일부처럼 ──
 function ClusterEyebrow({
   currentClusterId,
   clusters,
@@ -377,22 +377,24 @@ function ClusterEyebrow({
   const [open, setOpen] = useState(false);
   const current = clusters.find((c) => c.id === currentClusterId);
   return (
-    <div className="relative -mt-1 mb-1.5">
+    <div className="relative -mt-1 mb-2">
       <button
         onClick={(e) => {
           e.stopPropagation();
           setOpen(!open);
         }}
         title="클러스터 변경"
-        className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
+        className="group/cluster inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
       >
+        <Folder size={10} className="shrink-0 opacity-70 group-hover/cluster:opacity-100" />
         <span className="truncate max-w-[180px]">{current?.name ?? "Unsorted"}</span>
+        <ChevronDown size={10} className="shrink-0 opacity-0 group-hover/cluster:opacity-60 transition-opacity" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-20 min-w-[140px] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
-            <div className="px-3 py-1 text-[10px] uppercase text-gray-400">클러스터로 이동</div>
+          <div className="absolute left-0 top-full mt-1 z-20 min-w-[160px] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
+            <div className="px-3 py-1 text-[10px] uppercase tracking-wider text-gray-400">클러스터로 이동</div>
             {clusters.map((c) => (
               <button
                 key={c.id}
@@ -403,7 +405,7 @@ function ClusterEyebrow({
                 className={cn(
                   "w-full text-left px-3 py-1.5 text-xs transition-colors",
                   currentClusterId === c.id
-                    ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                    ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-medium"
                     : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50",
                 )}
               >
