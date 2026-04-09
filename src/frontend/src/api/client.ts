@@ -186,8 +186,17 @@ export async function putContext(content: string): Promise<void> {
 }
 
 // Topic CRUD
-export async function createTopic(name: string, description?: string): Promise<{ id: number }> {
-  const { data } = await api.post("/api/topics", { name, description: description || "", container_name: `dojang-${name.toLowerCase()}` });
+export async function createTopic(
+  name: string,
+  description?: string,
+  clusterId?: number,
+): Promise<{ id: number }> {
+  const { data } = await api.post("/api/topics", {
+    name,
+    description: description || "",
+    container_name: `dojang-${name.toLowerCase()}`,
+    ...(clusterId !== undefined ? { cluster_id: clusterId } : {}),
+  });
   return data;
 }
 export async function updateTopic(
@@ -228,11 +237,14 @@ export async function createCluster(payload: { name: string; description?: strin
   const { data } = await api.post("/api/clusters", payload);
   return data;
 }
-export async function updateCluster(id: number, payload: { name?: string; description?: string }): Promise<void> {
+export async function updateCluster(id: number, payload: { name?: string; description?: string; order_num?: number }): Promise<void> {
   await api.patch(`/api/clusters/${id}`, payload);
 }
 export async function deleteCluster(id: number): Promise<void> {
   await api.delete(`/api/clusters/${id}`);
+}
+export async function reorderClusters(ids: number[]): Promise<void> {
+  await api.post("/api/clusters/reorder", { ids });
 }
 
 // Sketches

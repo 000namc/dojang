@@ -121,6 +121,7 @@ class CreateTopicRequest(BaseModel):
     name: str
     description: str = ""
     container_name: str = "dojang-generic"
+    cluster_id: int | None = None
 
 
 class UpdateTopicRequest(BaseModel):
@@ -139,6 +140,7 @@ class CreateClusterRequest(BaseModel):
 class UpdateClusterRequest(BaseModel):
     name: str | None = None
     description: str | None = None
+    order_num: int | None = None
 
 
 # --- Sketch ---

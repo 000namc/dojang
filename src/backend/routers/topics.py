@@ -40,14 +40,17 @@ async def get_topic(topic_id: int, db: aiosqlite.Connection = Depends(get_db)):
 
 @router.post("/topics")
 async def create_topic(req: CreateTopicRequest, db: aiosqlite.Connection = Depends(get_db)):
-    # 신규 토픽은 기본 cluster에 자동 할당
-    cur = await db.execute("SELECT id FROM clusters WHERE is_default = 1 LIMIT 1")
-    default_row = await cur.fetchone()
-    default_cluster_id = default_row["id"] if default_row else None
+    # cluster_id 가 명시되어 있으면 거기에, 없으면 기본 cluster 에 할당
+    if req.cluster_id is not None:
+        cluster_id = req.cluster_id
+    else:
+        cur = await db.execute("SELECT id FROM clusters WHERE is_default = 1 LIMIT 1")
+        default_row = await cur.fetchone()
+        cluster_id = default_row["id"] if default_row else None
 
     cursor = await db.execute(
         "INSERT INTO topics (name, description, container_name, cluster_id) VALUES (?, ?, ?, ?)",
-        (req.name, req.description, req.container_name, default_cluster_id),
+        (req.name, req.description, req.container_name, cluster_id),
     )
     await db.commit()
     return {"id": cursor.lastrowid, "name": req.name}

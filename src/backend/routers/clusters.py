@@ -20,8 +20,9 @@ async def get_db(settings: Settings = Depends(get_settings)):
 
 @router.get("/clusters")
 async def list_clusters(db: aiosqlite.Connection = Depends(get_db)):
+    # 사용자가 reorder 할 수 있어야 하므로 is_default 가 아닌 order_num 우선 정렬
     cursor = await db.execute(
-        "SELECT id, name, description, order_num, is_default, created_at FROM clusters ORDER BY is_default DESC, order_num, id"
+        "SELECT id, name, description, order_num, is_default, created_at FROM clusters ORDER BY order_num, id"
     )
     rows = [dict(r) for r in await cursor.fetchall()]
     # 각 cluster에 속한 topic 개수
@@ -49,7 +50,6 @@ async def update_cluster(
     req: UpdateClusterRequest,
     db: aiosqlite.Connection = Depends(get_db),
 ):
-    # 기본 cluster는 이름 변경만 허용 (삭제 보호)
     fields = []
     values: list = []
     if req.name is not None:
@@ -58,10 +58,30 @@ async def update_cluster(
     if req.description is not None:
         fields.append("description = ?")
         values.append(req.description)
+    if req.order_num is not None:
+        fields.append("order_num = ?")
+        values.append(req.order_num)
     if not fields:
         return {"ok": True}
     values.append(cluster_id)
     await db.execute(f"UPDATE clusters SET {', '.join(fields)} WHERE id = ?", values)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/clusters/reorder")
+async def reorder_clusters(
+    body: dict,
+    db: aiosqlite.Connection = Depends(get_db),
+):
+    """전체 cluster 순서를 한 번에 적용. body = {"ids": [3, 1, 2, ...]}.
+    list 의 인덱스가 새 order_num 이 된다. 기본 cluster 도 위치 이동 가능하지만
+    is_default DESC 정렬이 list_clusters 에 남아 있어 항상 위에 표시된다."""
+    ids: list[int] = body.get("ids", [])
+    for idx, cid in enumerate(ids):
+        await db.execute(
+            "UPDATE clusters SET order_num = ? WHERE id = ?", (idx, cid)
+        )
     await db.commit()
     return {"ok": True}
 

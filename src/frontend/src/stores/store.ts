@@ -90,7 +90,7 @@ interface DojangState {
   saveCheckpoint: (name?: string) => Promise<void>;
   restoreCheckpoint: (checkpointId: number) => Promise<void>;
   deleteCheckpoint: (checkpointId: number) => Promise<void>;
-  createTopic: (name: string, description?: string) => Promise<void>;
+  createTopic: (name: string, description?: string, clusterId?: number) => Promise<number>;
   updateTopic: (
     id: number,
     updates: {
@@ -417,9 +417,10 @@ export const useStore = create<DojangState>((set, get) => ({
     await get().loadCheckpoints();
   },
 
-  createTopic: async (name, description) => {
-    await api.createTopic(name, description);
+  createTopic: async (name, description, clusterId) => {
+    const { id } = await api.createTopic(name, description, clusterId);
     await get().loadTopics();
+    return id;
   },
 
   updateTopic: async (id, updates) => {
