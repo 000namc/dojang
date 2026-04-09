@@ -91,7 +91,15 @@ interface DojangState {
   restoreCheckpoint: (checkpointId: number) => Promise<void>;
   deleteCheckpoint: (checkpointId: number) => Promise<void>;
   createTopic: (name: string, description?: string) => Promise<void>;
-  updateTopic: (id: number, updates: { name?: string; description?: string }) => Promise<void>;
+  updateTopic: (
+    id: number,
+    updates: {
+      name?: string;
+      description?: string;
+      cluster_id?: number;
+      default_curriculum_id?: number;
+    },
+  ) => Promise<void>;
   deleteTopic: (id: number) => Promise<void>;
   addContextSnippet: (text: string, lineStart?: number, lineEnd?: number) => void;
   removeContextSnippet: (id: string) => void;
@@ -133,7 +141,12 @@ export const useStore = create<DojangState>((set, get) => ({
   loadTopics: async () => {
     const topics = await api.getTopics();
     set({ topics });
-    if (topics.length > 0 && !get().currentTopic) {
+    const cur = get().currentTopic;
+    if (cur) {
+      // currentTopic 을 새 데이터로 동기화 (default_curriculum_id 등 변경 반영)
+      const refreshed = topics.find((t) => t.id === cur.id);
+      if (refreshed) set({ currentTopic: refreshed });
+    } else if (topics.length > 0) {
       await get().selectTopic(topics[0].id);
     }
   },

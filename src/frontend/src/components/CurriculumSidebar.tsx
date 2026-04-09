@@ -7,7 +7,7 @@ import {
   BookOpen,
   Trash2,
   X,
-  MoreHorizontal,
+  Star,
 } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
@@ -31,6 +31,7 @@ export default function CurriculumSidebar({ className }: { className?: string })
     deleteKnowledge,
     selectExercise,
     selectCard,
+    updateTopic,
   } = useStore();
 
   useEffect(() => { loadTopics(); }, []);
@@ -60,7 +61,13 @@ export default function CurriculumSidebar({ className }: { className?: string })
             key={cur.id}
             curriculum={cur}
             isActive={cur.id === currentCurriculumId}
+            isDefault={currentTopic?.default_curriculum_id === cur.id}
             onSelect={() => selectCurriculum(cur.id)}
+            onSetDefault={
+              currentTopic
+                ? () => updateTopic(currentTopic.id, { default_curriculum_id: cur.id })
+                : undefined
+            }
             onDelete={!cur.is_default ? () => { if (confirm(`"${cur.name}" 삭제?`)) deleteCurriculum(cur.id); } : undefined}
             curriculumTree={cur.id === currentCurriculumId ? curriculumTree : null}
             selectedExerciseId={selectedExerciseId}
@@ -83,7 +90,9 @@ export default function CurriculumSidebar({ className }: { className?: string })
 function CurriculumSection({
   curriculum,
   isActive,
+  isDefault,
   onSelect,
+  onSetDefault,
   onDelete,
   curriculumTree,
   selectedExerciseId,
@@ -96,7 +105,9 @@ function CurriculumSection({
 }: {
   curriculum: { id: number; name: string; is_default: number };
   isActive: boolean;
+  isDefault: boolean;
   onSelect: () => void;
+  onSetDefault?: () => void;
   onDelete?: () => void;
   curriculumTree: CurriculumTree | null;
   selectedExerciseId: number | null;
@@ -133,6 +144,26 @@ function CurriculumSection({
           {expanded ? <ChevronDown size={13} className="shrink-0 text-gray-400" /> : <ChevronRight size={13} className="shrink-0 text-gray-400" />}
           <span className="truncate">{curriculum.name}</span>
         </button>
+        {onSetDefault && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isDefault) onSetDefault();
+            }}
+            title={isDefault ? "현재 기본 커리큘럼" : "기본 커리큘럼으로 설정"}
+            className="mr-1 rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <Star
+              size={13}
+              className={cn(
+                "transition-colors",
+                isDefault
+                  ? "fill-yellow-400 text-yellow-400"
+                  : "text-gray-300 dark:text-gray-600 hover:text-yellow-400",
+              )}
+            />
+          </button>
+        )}
         {onDelete && (
           <button
             onClick={onDelete}
