@@ -13,7 +13,6 @@ import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
 import * as api from "../api/client";
 import type { Cluster } from "../api/client";
-import HelpBanner from "../components/HelpBanner";
 
 interface SubjectsProps {
   className?: string;
@@ -219,13 +218,7 @@ export default function Subjects({ className, onNavigateToLearn }: SubjectsProps
   return (
     <div className={cn("h-full overflow-y-auto bg-white dark:bg-gray-900", className)}>
       <div className="max-w-5xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">Topics</h1>
-        <HelpBanner storageKey="topics" className="mb-6">
-          <strong>학습 portfolio</strong> 를 cluster 로 정리하는 메타 레이어. Cluster 헤더를 끌어서 순서 변경, 토픽 카드를 다른 cluster 로 드롭해서 이동.{" "}
-          <span className="text-gray-500 dark:text-gray-500">
-            🚧 Tip: Claude 가 cluster 를 진단·제안하는 MCP 도구는 <strong>개발 중</strong> 입니다 (예정: <code>list_clusters</code> / <code>create_cluster</code> / 토픽 이동). 지금은 수동 정리만.
-          </span>
-        </HelpBanner>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Topics</h1>
 
         <div className="space-y-4">
           {clusters.map((c) => {

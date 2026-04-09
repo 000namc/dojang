@@ -9,7 +9,6 @@ import "@react-sigma/core/lib/style.css";
 import Graph from "graphology";
 import { cn } from "../lib/cn";
 import { getKnowledgeGraph, type KGNode } from "../api/client";
-import HelpBanner from "../components/HelpBanner";
 
 interface ExploreProps {
   className?: string;
@@ -1115,18 +1114,6 @@ export default function Explore({ className }: ExploreProps) {
             <GlowLayer />
           </SigmaContainer>
         </>
-      )}
-
-      {/* 도움말 — 맨 위 중앙 overlay */}
-      {!loading && data.nodes.length > 0 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[min(640px,calc(100%-2rem))]">
-          <HelpBanner storageKey="explore">
-            <strong>새로 공부할 영역을 찾는</strong> 탭. 별이 흐린 곳이 아직 안 파본 곳. 토픽을 끌면 주변 별이 따라옵니다 (좌상단 단축키 참고).{" "}
-            <span className="text-white/50">
-              Tip: 여기서 발견한 궁금증을 Sketch 로 가져가 "이 주제 깊게 파려면?" 하고 물으면, Claude 가 <code>get_progress</code> 로 현재 상태를 읽고 다음 학습 방향을 제안해요.
-            </span>
-          </HelpBanner>
-        </div>
       )}
 
       {/* 단축키 인디케이터 */}

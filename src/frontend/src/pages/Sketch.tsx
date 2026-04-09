@@ -3,7 +3,6 @@ import { Plus, Trash2, FileText } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useSketches } from "../stores/sketches";
 import TerminalPanel from "../components/TerminalPanel";
-import HelpBanner from "../components/HelpBanner";
 
 interface SketchProps {
   className?: string;
@@ -110,14 +109,6 @@ export default function Sketch({ className }: SketchProps) {
 
       {/* Center: editor */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="px-4 pt-3">
-          <HelpBanner storageKey="sketch">
-            <strong>무얼 공부할지 / 어떤 커리큘럼을 만들지 Claude 와 대화하면서 정하는</strong> 자리. 각 sketch 는 자기만의 Claude 세션을 영구적으로 갖습니다.{" "}
-            <span className="text-gray-500 dark:text-gray-500">
-              Tip: "CLI 기초 커리큘럼 만들어줘" → <code>create_curriculum</code> + <code>add_subject</code> + <code>create_exercise</code> 연쇄 호출로 Learn 에 즉시 반영. "내 진척도" → <code>get_progress</code>. "이 주제 추가 노트 저장" → <code>save_knowledge</code>.
-            </span>
-          </HelpBanner>
-        </div>
         {current ? (
           <>
             <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-4 py-2">
