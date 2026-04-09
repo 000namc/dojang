@@ -183,7 +183,9 @@ function CurriculumSection({
         )}
       </div>
       {expanded && isActive && curriculumTree && (
-        <div className="px-2 pb-2 pt-1">
+        // 하위 문서 느낌: 왼쪽 margin + 수직 guide line + 내부 padding.
+        // ml-[22px] 는 curriculum header 의 chevron 중심과 border-l 을 대략 맞춤.
+        <div className="ml-[22px] mr-2 mb-2 mt-0.5 pl-2 pr-0 pb-1 pt-0.5 border-l border-gray-200 dark:border-gray-800/70">
           {curriculumTree.subjects.map((subject) => (
             <SubjectNode
               key={subject.id}
