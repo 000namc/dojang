@@ -427,11 +427,15 @@ function GraphLoader({
 
     loadGraph(graph);
 
-    // 살짝 줌 아웃해서 마진 효과 (꽉 차지 않게)
+    // 새 그래프에 fit 한 뒤 살짝 줌 아웃해서 마진 효과 (꽉 차지 않게).
+    // 이전 코드는 cur.ratio * 1.3 으로 누적해서 셔플마다 화면이 점점 작아졌음.
+    // 절대값으로 설정해서 누적을 막는다.
     setTimeout(() => {
       const camera = sigma.getCamera();
-      const cur = camera.getState();
-      camera.animate({ ratio: cur.ratio * 1.3 }, { duration: 400 });
+      camera.animate(
+        { ratio: 1.3, x: 0.5, y: 0.5, angle: 0 },
+        { duration: 400 },
+      );
     }, 50);
   }, [data, shuffleNonce, loadGraph, sigma]);
 
