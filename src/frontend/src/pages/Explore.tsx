@@ -26,12 +26,11 @@ const TOPIC_EDGE: Record<string, string> = {
 };
 const DEFAULT_EDGE = "#5a6a8a";
 
-// 노드는 배경에 가까운 어두운 색 — GlowLayer (screen blend) 가 twinkle 에 따라 밝혀줌.
-// 별 자체가 밝으면 glow 가 꺼져도 항상 밝아 보여서 깜빡임 효과가 안 나옴.
+// 노드는 배경보다 약간 밝은 정도 — 항상 보이되 glow (screen blend) 가 얹혀서 깜빡임을 만든다.
 const STAR_COLORS = {
-  topic: "#1e2240",
-  subject: "#161a36",
-  satellite: "#0e1028",
+  topic: "#3a4068",
+  subject: "#2a2f52",
+  satellite: "#1c2040",
 };
 
 // ── 별자리 stick figure 데이터 (정규화 -1 ~ 1) ─────────────────────────
@@ -927,11 +926,11 @@ function GlowLayer() {
         const wave1 = 0.5 + 0.5 * Math.sin((now / period) * Math.PI * 2 + phase);
         const wave2 = 0.5 + 0.5 * Math.sin((now / period2) * Math.PI * 2 + phase * 1.7);
         const combined = wave1 * 0.65 + wave2 * 0.35;
-        // 범위 0.06 ~ 1.0 — 어둠 쪽이 깊어야 밝아지는 순간이 극적
-        const twinkle = 0.06 + 0.94 * combined;
+        // 범위 0.35 ~ 1.0 — 항상 어느 정도 밝기 유지하되, peak 에서 확 밝아짐
+        const twinkle = 0.35 + 0.65 * combined;
 
         const baseSize = kind === "topic" ? 50 : kind === "subject" ? 22 : 8;
-        const glowR = baseSize * Math.min(scale * 0.9, 1.6) * (0.3 + 1.0 * combined);
+        const glowR = baseSize * Math.min(scale * 0.9, 1.6) * (0.6 + 0.7 * combined);
         if (glowR < 2) return;
 
         const grad = ctx.createRadialGradient(view.x, view.y, 0, view.x, view.y, glowR);
