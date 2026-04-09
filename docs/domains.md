@@ -10,7 +10,6 @@
 | Git | dojang-git | alpine:3.19 | branch, merge, rebase, conflict |
 | Docker | dojang-docker | docker:27-cli | image, container, Dockerfile, compose |
 | SQL | dojang-sql | mysql:8.0 | SELECT, JOIN, GROUP BY, subquery |
-| Python | dojang-python | python:3.13 | 데이터 분석, 머신러닝 기초 |
 
 ## 도메인 디렉토리 구조
 

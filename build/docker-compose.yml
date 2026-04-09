@@ -1,6 +1,5 @@
 services:
   app:
-    profiles: ["prod"]
     build:
       context: ..
       dockerfile: build/app/Dockerfile
@@ -10,11 +9,16 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - dojang-data:/app/data
+      # 백엔드 코드 bind mount → uvicorn --reload 로 핫리로드
+      - ../src/backend:/app/src/backend
+      # 호스트의 claude 자격증명 + 세션 jsonl 공유.
+      # ~/.claude/ (디렉토리: 세션·플러그인·hooks) + ~/.claude.json (config 파일) 둘 다 필요.
+      - ${HOME}/.claude:/root/.claude
+      - ${HOME}/.claude.json:/root/.claude.json
     depends_on:
       dojang-sql:
         condition: service_healthy
-    env_file:
-      - ../.env
+    command: ["uv", "run", "uvicorn", "src.backend.main:app", "--host", "0.0.0.0", "--port", "8010", "--reload"]
 
   dojang-cli:
     build: ./cli
@@ -29,10 +33,6 @@ services:
     container_name: dojang-docker
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-
-  dojang-python:
-    build: ./python
-    container_name: dojang-python
 
   dojang-sql:
     build: ./sql

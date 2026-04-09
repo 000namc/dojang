@@ -18,27 +18,32 @@ Claude Code와 대화하며 별자리처럼 자라나는 개인 학습 공간.
 
 ## Quick Start
 
-**필수 설치:**
-- [Claude Code CLI](https://docs.anthropic.com/claude/docs/claude-code) — `claude` 명령어가 PATH에 있어야 합니다
-- Docker
+**필수 설치:** Docker.
 
 ```bash
 git clone https://github.com/000namc/dojang.git && cd dojang
-cp .env.example .env
-cd build && docker compose --profile prod up -d
+cd build && docker compose up -d
 ```
 
 브라우저에서 **http://localhost:8010** 열기.
 
-처음 부팅하면 빈 DB를 감지하고 `build/{topic}/curriculum.json` 시드를 자동으로 채웁니다 (CLI / Git / Docker / SQL / Python).
+처음 부팅하면 빈 DB를 감지하고 `build/{topic}/curriculum.json` 시드를 자동으로 채웁니다 (CLI / Git / Docker / SQL).
 
-### Development (hot-reload)
+> **첫 실행 시 Claude 로그인 한 번**:
+> ```bash
+> docker exec -it dojang-app claude /login
+> ```
+> 호스트의 `~/.claude/` 와 `~/.claude.json` 이 컨테이너에 마운트되어 있어서, 한 번 로그인하면 토큰이 호스트 파일에 떨어지고 컨테이너 재시작 후에도 영속됩니다. macOS 는 자격증명이 keychain 에 있어서 자동 인계가 안 되기 때문에 OAuth 흐름이 한 번 필요하고, Linux 는 보통 호스트의 `~/.claude/.credentials.json` 이 그대로 공유돼서 즉시 동작합니다.
 
+### 컨트리뷰터: 핫리로드
+
+백엔드는 default 로 `src/backend/` 가 컨테이너에 bind mount + `uvicorn --reload` 라서 호스트에서 코드를 바꾸면 자동으로 반영됩니다. 별도 설정 없이 그냥 편집하면 됨.
+
+프론트엔드를 자주 만지는 경우엔 빌드 산출물 대신 vite dev server 가 필요합니다:
 ```bash
-cd build && docker compose up -d && cd ..        # 도메인 컨테이너만
-uv sync && uv run uvicorn src.backend.main:app --port 8010 --reload
-cd src/frontend && npm install && npm run dev    # http://localhost:5173
+(cd src/frontend && npm install && npm run dev)   # http://localhost:5173
 ```
+프론트는 5173, 백엔드 API 는 여전히 8010 으로 프록시됩니다.
 
 ## Tabs
 
@@ -72,7 +77,6 @@ cd src/frontend && npm install && npm run dev    # http://localhost:5173
 | **Git** | branch, merge, rebase, conflict resolution |
 | **Docker** | images, containers, Dockerfile, compose |
 | **SQL** | SELECT, JOIN, GROUP BY, subqueries (MySQL) |
-| **Python** | 데이터 분석, 머신러닝 기초 |
 
 ## 내 데이터는 어디에 있는가
 
@@ -80,7 +84,7 @@ Dojang은 사용자 머신 안에서만 동작합니다. 어떤 데이터도 외
 
 | 무엇 | 어디에 | 누가 손대는가 | git 추적 |
 |---|---|---|---|
-| **샘플 데이터** (시드 커리큘럼) | `build/{cli,git,docker,sql,python}/curriculum.json` + `knowledge.json` | 빈 DB일 때 `seed_if_empty()`가 한 번 읽어서 SQLite에 복사. 이후 절대 안 건드림 | ✅ 커밋 |
+| **샘플 데이터** (시드 커리큘럼) | `build/{cli,git,docker,sql}/curriculum.json` + `knowledge.json` | 빈 DB일 때 `seed_if_empty()`가 한 번 읽어서 SQLite에 복사. 이후 절대 안 건드림 | ✅ 커밋 |
 | **개인 학습 이력** | `data/dojang.db` (SQLite) | 백엔드 라우터들이 INSERT/UPDATE | ❌ `.gitignore` |
 | **Sketch 본문** | `data/dojang.db` 의 `sketches` 테이블 | Sketch 탭 에디터 | ❌ `.gitignore` |
 | **연습 시도 / 실행 결과** | `data/dojang.db` 의 `attempts` 테이블 | Learn 탭 / 컨테이너 실행 | ❌ `.gitignore` |
@@ -96,11 +100,11 @@ Dojang은 사용자 머신 안에서만 동작합니다. 어떤 데이터도 외
 
 로컬에서 새 토픽을 만들거나 채팅으로 커리큘럼을 추가해도 그 변경은 `data/dojang.db` 에만 들어갑니다. `build/{topic}/*.json` 시드 파일은 절대 런타임에 기록되지 않습니다. 즉 자기 학습 데이터가 레포에 섞일 일이 없고, PR을 보낼 때 `git diff` 가 깨끗합니다.
 
-### Docker 사용 시
+### Docker volume
 
-`docker compose --profile prod up -d` 로 띄울 경우 `data/` 는 named volume `dojang-data` 로 마운트되어 컨테이너 재시작에도 살아남습니다. 컨테이너를 완전히 삭제하고 싶으면:
+`data/` 는 named volume `dojang-data` 로 마운트되어 컨테이너 재시작에도 살아남습니다. 컨테이너 + 데이터까지 완전히 삭제하려면:
 ```bash
-cd build && docker compose --profile prod down -v   # 데이터 포함 삭제
+cd build && docker compose down -v
 ```
 
 ## Contributing
@@ -162,7 +166,7 @@ src/
 └── build/
     ├── docker-compose.yml    # Full stack
     ├── app/Dockerfile
-    └── {cli,git,docker,sql,python}/  # 도메인별 컨테이너 + 시드 데이터
+    └── {cli,git,docker,sql}/  # 도메인별 컨테이너 + 시드 데이터
 ```
 
 ## Docs
@@ -171,4 +175,4 @@ src/
 - [Domains](docs/domains.md) — 새 도메인 추가법
 - [MCP Tools](docs/mcp-tools.md) — Claude Code가 호출할 수 있는 도구 목록
 - [Development](docs/development.md) — 프로젝트 구조, DB 스키마
-- [Deployment](docs/deployment.md) — 배포 가이드
+- [Operations](docs/deployment.md) — 운영 가이드 (업데이트 / 백업 / 모니터링)

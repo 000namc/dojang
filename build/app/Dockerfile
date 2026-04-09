@@ -9,8 +9,12 @@ RUN npm run build
 
 FROM python:3.13-slim
 
+# Node.js (LTS) + Claude Code CLI + docker client + uv
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl docker.io && \
+    apt-get install -y --no-install-recommends curl ca-certificates gnupg docker.io && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    npm install -g @anthropic-ai/claude-code && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir uv
 

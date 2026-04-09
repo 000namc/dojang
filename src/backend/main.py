@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.backend.config import get_settings
-from src.backend.database import init_db
+from src.backend.database import backfill_defaults, init_db
 from src.backend.seed import seed_if_empty
 from src.backend.routers import topics, curriculum, exercises, terminal, knowledge, knowledge_graph, sketches, clusters
 
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     await init_db(settings.db_path)
     await seed_if_empty(settings.db_path)
+    await backfill_defaults(settings.db_path)
     yield
 
 

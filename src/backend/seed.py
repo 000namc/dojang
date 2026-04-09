@@ -22,7 +22,6 @@ async def seed_if_empty(db_path: str) -> None:
             ("Git", "Git 버전 관리 연습", "dojang-git"),
             ("Docker", "Docker 컨테이너 연습", "dojang-docker"),
             ("SQL", "SQL 쿼리 작성 연습", "dojang-sql"),
-            ("Python", "파이썬 데이터 분석 · 머신러닝", "dojang-python"),
         ]
         for name, desc, container in topic_configs:
             await db.execute(
@@ -33,7 +32,7 @@ async def seed_if_empty(db_path: str) -> None:
         await db.commit()
 
         # Load curriculum for each topic
-        for topic_dir_name, topic_name in [("cli", "CLI"), ("git", "Git"), ("docker", "Docker"), ("sql", "SQL"), ("python", "Python")]:
+        for topic_dir_name, topic_name in [("cli", "CLI"), ("git", "Git"), ("docker", "Docker"), ("sql", "SQL")]:
             curriculum_path = TOPICS_DIR / topic_dir_name / "curriculum.json"
             if not curriculum_path.exists():
                 continue

@@ -3,7 +3,7 @@
 Claude Code 세션이 호출할 수 있는 MCP 도구 목록. `src/backend/tools.py` 의 `TOOL_REGISTRY` 에 정의되어 있고, `src/backend/mcp_server/server.py` 가 stdio MCP 서버로 노출한다.
 
 용어 정리:
-- **topic** = 학습 주제 (CLI, Git, Docker, SQL, Python 등)
+- **topic** = 학습 주제 (CLI, Git, Docker, SQL 등)
 - **curriculum** = topic 아래의 학습 코스 (한 topic에 여러 curriculum 가능, 그 중 하나가 default)
 - **subject** = curriculum 아래의 과목 (예: SQL의 "JOIN", "GROUP BY")
 - **exercise / knowledge** = subject 아래의 실습 / 노트

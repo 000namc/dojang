@@ -2,27 +2,30 @@
 
 ## 요구사항
 
-- Python 3.13+, [uv](https://github.com/astral-sh/uv)
-- Node.js 20+
 - Docker
-- [Claude Code CLI](https://docs.anthropic.com/claude/docs/claude-code) — `claude` 명령이 PATH에 있어야 함 (Dojang은 외부 AI API를 쓰지 않고 이 CLI를 PTY로 spawn해서 사용)
+
+호스트에는 Python / Node / Claude Code CLI 를 깔지 않습니다. 모두 `dojang-app` 컨테이너 안에 들어 있고, 호스트는 docker 만 있으면 됨.
 
 ## 실행
 
 ```bash
-# 1. 도메인 컨테이너
-cd build && docker compose up -d && cd ..
-
-# 2. 백엔드
-uv sync
-uv run uvicorn src.backend.main:app --port 8010 --reload
-
-# 3. 프론트엔드 (다른 터미널)
-cd src/frontend && npm install && npm run dev
+cd build && docker compose up -d
 ```
 
-- 앱: http://localhost:5173
+- 앱: http://localhost:8010
 - API docs: http://localhost:8010/docs
+
+`src/backend/` 는 컨테이너에 bind mount + `uvicorn --reload` 라서 호스트에서 백엔드 코드를 편집하면 자동 반영됩니다. 별도 단계 없음.
+
+프론트엔드를 자주 만지는 경우만 vite dev server 가 따로 필요:
+```bash
+cd src/frontend && npm install && npm run dev   # http://localhost:5173
+```
+
+claude 자격증명은 컨테이너의 `/root/.claude` 가 호스트의 `${HOME}/.claude` 와 마운트되어 영속됩니다. macOS 는 keychain 자격증명이 마운트로 따라오지 않아서 첫 실행 시 한 번 컨테이너 안에서 로그인:
+```bash
+docker exec -it dojang-app claude /login
+```
 
 ## 프로젝트 구조
 
@@ -62,8 +65,7 @@ dojang/
 │   ├── cli/
 │   ├── git/
 │   ├── docker/
-│   ├── sql/
-│   └── python/
+│   └── sql/
 ├── imgs/                        # README 스크린샷
 ├── docs/
 ├── data/                        # 런타임 (gitignored, .gitkeep만 커밋)

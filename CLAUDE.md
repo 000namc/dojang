@@ -13,7 +13,7 @@
 
 ## 데이터 정책
 
-- **샘플 데이터**: `build/{cli,git,docker,sql,python}/curriculum.json` + `knowledge.json`. 레포에 커밋. 첫 부팅 시 `seed_if_empty()`가 빈 DB 감지 → 자동 시드.
+- **샘플 데이터**: `build/{cli,git,docker,sql}/curriculum.json` + `knowledge.json`. 레포에 커밋. 첫 부팅 시 `seed_if_empty()`가 빈 DB 감지 → 자동 시드.
 - **개인 데이터**: `data/dojang.db`. **gitignored**. Docker는 named volume `dojang-data`로 영속화.
 - **Claude Code 세션**: `~/.claude/projects/<encoded-cwd>/<uuid>.jsonl` — 사용자 home 디렉토리에 영속.
 - **API 키**: Dojang은 외부 AI API를 호출하지 않으므로 키가 필요 없음. `claude` CLI 가 자체 인증 처리.
@@ -21,13 +21,14 @@
 ## 실행
 
 ```bash
-# 프로덕션 (한 줄)
-cd build && docker compose --profile prod up -d    # http://localhost:8010
+cd build && docker compose up -d    # http://localhost:8010
+```
 
-# 개발 (hot-reload)
-cd build && docker compose up -d && cd ..     # 도메인 컨테이너만
-uv run uvicorn src.backend.main:app --port 8010 --reload
-cd src/frontend && npm run dev                # http://localhost:5173
+`src/backend/` 가 컨테이너에 bind mount + `uvicorn --reload` 라 호스트에서 코드 바꾸면 자동 반영. `${HOME}/.claude` 도 컨테이너에 마운트되어 호스트 자격증명 / 세션 jsonl 이 그대로 공유됨 (macOS 는 keychain 이라서 첫 실행 시 `docker exec -it dojang-app claude /login` 한 번 필요).
+
+프론트엔드를 자주 만지면 별도로 vite dev server:
+```bash
+cd src/frontend && npm run dev      # http://localhost:5173
 ```
 
 ## 탭별 역할
@@ -55,7 +56,8 @@ cd src/frontend && npm run dev                # http://localhost:5173
 ## 규칙
 
 - 백엔드 포트: 8010, 프론트엔드 포트: 5173
-- uvicorn 실행: `uv run uvicorn src.backend.main:app`
+- 백엔드는 항상 컨테이너 안에서 실행 (`docker compose up -d`). 호스트에 `uv sync` 같은 파이썬 의존성 설치 금지
+- 도메인 컨테이너 (`dojang-cli` 등) 는 같은 compose 로 사이드카처럼 같이 뜸
 - Python import는 항상 `from src.backend.xxx` 형태
 - DB는 aiosqlite 직접 사용 (ORM 없음)
 - 도메인 컨테이너 실행은 `docker-py`의 `container.exec_run()` 사용
@@ -72,4 +74,4 @@ cd src/frontend && npm run dev                # http://localhost:5173
 - [docs/domains.md](docs/domains.md) — 도메인 구조, curriculum.json 형식
 - [docs/mcp-tools.md](docs/mcp-tools.md) — MCP 도구 목록
 - [docs/development.md](docs/development.md) — DB 스키마, API 엔드포인트
-- [docs/deployment.md](docs/deployment.md) — 배포 가이드
+- [docs/deployment.md](docs/deployment.md) — 운영 가이드 (업데이트 / 백업 / 모니터링)
