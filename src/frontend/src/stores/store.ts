@@ -104,6 +104,7 @@ interface DojangState {
   addContextSnippet: (text: string, lineStart?: number, lineEnd?: number) => void;
   removeContextSnippet: (id: string) => void;
   clearContextSnippets: () => void;
+  resetContext: () => void;
   _syncContextFile: () => void;
   addChatSnippet: (snippet: Omit<ChatSnippet, "id">) => void;
   removeChatSnippet: (id: string) => void;
@@ -451,6 +452,11 @@ export const useStore = create<DojangState>((set, get) => ({
   clearContextSnippets: () => {
     set({ contextSnippets: [] });
     get()._syncContextFile();
+  },
+
+  resetContext: () => {
+    set({ contextRef: null, contextSnippets: [] });
+    api.putContext("").catch(() => {});
   },
 
   _syncContextFile: () => {

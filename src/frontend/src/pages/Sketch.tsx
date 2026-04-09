@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Plus, Trash2, FileText } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useSketches } from "../stores/sketches";
+import { putContext } from "../api/client";
 import TerminalPanel from "../components/TerminalPanel";
 
 interface SketchProps {
@@ -35,6 +36,14 @@ export default function Sketch({ className }: SketchProps) {
       flush();
     };
   }, []);
+
+  // 현재 sketch 가 바뀌면 그 내용을 current_context.md 로 sync
+  useEffect(() => {
+    if (current) {
+      const title = deriveTitle(current.content, current.title);
+      putContext(`@sketch:${title} #${current.id}\n\n${current.content}`).catch(() => {});
+    }
+  }, [current?.id]);
 
   const handleCreate = async () => {
     setCreating(true);

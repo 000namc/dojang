@@ -7,12 +7,20 @@ import Subjects from "./pages/Subjects";
 import Explore from "./pages/Explore";
 import Guide from "./pages/Guide";
 import TerminalPanel from "./components/TerminalPanel";
+import { useStore } from "./stores/store";
 import type { ViewType } from "./components/IconNav";
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ViewType>("home");
+  const resetContext = useStore((s) => s.resetContext);
 
-  const switchToLearn = () => setCurrentView("learn");
+  const switchView = (view: ViewType) => {
+    // 탭 이동 시 learn 맥락 리셋 — 각 탭이 자기 context 를 다시 세팅
+    resetContext();
+    setCurrentView(view);
+  };
+
+  const switchToLearn = () => switchView("learn");
 
   // Sketch는 자체 per-sketch 터미널을 가지므로 글로벌 도크 제외
   // Home은 자체 워크스페이스 플로우가 있으므로 제외
@@ -22,10 +30,10 @@ export default function App() {
 
   return (
     <div className="flex h-screen">
-      <IconNav activeView={currentView} onViewChange={setCurrentView} />
+      <IconNav activeView={currentView} onViewChange={switchView} />
       <main className="flex-1 min-w-0">
         {currentView === "home" ? (
-          <Home className="h-full" onSelectTopic={switchToLearn} onNavigate={(v) => setCurrentView(v as ViewType)} />
+          <Home className="h-full" onSelectTopic={switchToLearn} onNavigate={(v) => switchView(v as ViewType)} />
         ) : currentView === "sketch" ? (
           <Sketch className="h-full" />
         ) : currentView === "learn" ? (
