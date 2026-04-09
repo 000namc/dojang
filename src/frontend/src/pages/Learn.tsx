@@ -27,7 +27,10 @@ export default function Learn({ className }: LearnProps) {
       <div className="flex-1 flex flex-col min-w-0">
         <div className="px-4 pt-3">
           <HelpBanner storageKey="learn">
-            왼쪽에서 커리큘럼을 고르면 그 안의 주제 · 노트 · 실습이 트리로 펼쳐집니다. 커리큘럼 옆 ★ 로 기본을 토글할 수 있고, 해제하면 그 토픽이 Explore 별자리에서 사라져요.
+            <strong>직접 공부하는 자리.</strong> 지금 보고 있는 노트 · 실습은 Claude 가 자동으로 인지합니다.{" "}
+            <span className="text-gray-500 dark:text-gray-500">
+              Tip: "이 실습 쉬운 버전 하나 만들어줘" (<code>create_exercise</code>), "해설 노트 추가" (<code>save_knowledge</code>), "내 진척도" (<code>get_progress</code>) 처럼 대화 한 줄로 커리큘럼을 직접 진화시킬 수 있어요.
+            </span>
           </HelpBanner>
         </div>
         {selectedItemType === "exercise" ? (

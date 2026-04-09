@@ -221,7 +221,10 @@ export default function Subjects({ className, onNavigateToLearn }: SubjectsProps
       <div className="max-w-5xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">Topics</h1>
         <HelpBanner storageKey="topics" className="mb-6">
-          Cluster 헤더를 잡고 드래그해서 순서를 바꾸고, 토픽 카드를 다른 cluster 본문으로 끌어서 이동하세요. 맨 아래 <strong>Cluster 추가</strong> 로 새 그룹을 만들 수 있고, 각 cluster 의 ▸ 로 접을 수 있습니다.
+          <strong>학습 portfolio</strong> 를 cluster 로 정리하는 메타 레이어. Cluster 헤더를 끌어서 순서 변경, 토픽 카드를 다른 cluster 로 드롭해서 이동.{" "}
+          <span className="text-gray-500 dark:text-gray-500">
+            🚧 Tip: Claude 가 cluster 를 진단·제안하는 MCP 도구는 <strong>개발 중</strong> 입니다 (예정: <code>list_clusters</code> / <code>create_cluster</code> / 토픽 이동). 지금은 수동 정리만.
+          </span>
         </HelpBanner>
 
         <div className="space-y-4">

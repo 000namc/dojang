@@ -64,7 +64,10 @@ export default function Home({ className, onNavigate }: HomeProps) {
     <div className={cn("flex flex-col h-full bg-white dark:bg-gray-900", className)}>
       <div className="px-4 pt-4">
         <HelpBanner storageKey="home" className="mx-auto max-w-2xl">
-          짧은 질문을 적고 Enter — 새 sketch 가 만들어지고 로컬 Claude 와 대화가 시작돼요.
+          짧은 질문을 적고 Enter — 새 sketch 가 만들어지고 로컬 Claude 와 대화가 시작돼요.{" "}
+          <span className="text-gray-500 dark:text-gray-500">
+            Tip: 아래 <strong>커리큘럼 생성</strong> 버튼은 Claude 가 <code>create_topic</code> + <code>create_curriculum</code> + <code>add_subject</code> 를 연쇄 호출해서 새 학습 트리를 바로 만들어 줍니다. 탭별 사용법은 좌측 <strong>Guide</strong>.
+          </span>
         </HelpBanner>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-4">
