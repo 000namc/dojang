@@ -89,6 +89,20 @@ export default function TerminalPanel({
     term.open(terminalRef.current);
     fitAddon.fit();
 
+    // xterm 은 기본적으로 Enter / Shift+Enter 를 구분 못하고 둘 다 \r 을 보내지만,
+    // Claude Code 는 \r 을 "제출", \x1b\r (ESC+CR) 을 "줄바꿈" 으로 해석한다.
+    // (VS Code terminal-setup 이 Shift+Enter 에 바인딩하는 시퀀스와 동일)
+    term.attachCustomKeyEventHandler((ev) => {
+      if (ev.type === "keydown" && ev.key === "Enter" && ev.shiftKey && !ev.ctrlKey && !ev.altKey && !ev.metaKey) {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: "input", data: "\x1b\r" }));
+        }
+        ev.preventDefault();
+        return false;
+      }
+      return true;
+    });
+
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const params = new URLSearchParams({ agent });
     if (sketchId != null) params.set("sketch_id", String(sketchId));
