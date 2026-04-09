@@ -24,7 +24,7 @@
 cd build && docker compose up -d    # http://localhost:8010
 ```
 
-`src/backend/` 가 컨테이너에 bind mount + `uvicorn --reload` 라 호스트에서 코드 바꾸면 자동 반영. `${HOME}/.claude` 도 컨테이너에 마운트되어 호스트 자격증명 / 세션 jsonl 이 그대로 공유됨 (macOS 는 keychain 이라서 첫 실행 시 `docker exec -it dojang-app claude /login` 한 번 필요).
+`src/backend/` 가 컨테이너에 bind mount + `uvicorn --reload` 라 호스트에서 코드 바꾸면 자동 반영. `${HOME}/.claude` 디렉토리만 컨테이너에 마운트되어 자격증명 (`.credentials.json`) / 세션 jsonl 이 호스트와 공유됨. `~/.claude.json` (config 파일) 은 호스트와 분리해서 dojang-data 볼륨에 자체 영속 — 호스트 macOS 의 atomic-rewrite + installMethod=native 가 컨테이너에서 race / mismatch 를 일으키기 때문. macOS 사용자는 첫 실행 시 `docker exec -it dojang-app claude /login` 한 번 필요.
 
 프론트엔드를 자주 만지면 별도로 vite dev server:
 ```bash

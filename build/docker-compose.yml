@@ -11,10 +11,13 @@ services:
       - dojang-data:/app/data
       # 백엔드 코드 bind mount → uvicorn --reload 로 핫리로드
       - ../src/backend:/app/src/backend
-      # 호스트의 claude 자격증명 + 세션 jsonl 공유.
-      # ~/.claude/ (디렉토리: 세션·플러그인·hooks) + ~/.claude.json (config 파일) 둘 다 필요.
+      # 호스트의 claude 세션 + 자격증명 공유 (~/.claude/.credentials.json 등).
+      # 단 ~/.claude.json (config 파일) 은 마운트하지 않음 — 호스트 macOS 의
+      # installMethod=native + atomic-rewrite 가 컨테이너에서 corrupt 로 보이는
+      # race condition 을 일으키고, OS-specific 설정이 mismatch 됨. 컨테이너는
+      # 자체 .claude.json 을 dojang-data 볼륨 (/app/data/claude.json → symlink) 에
+      # 영속화한다.
       - ${HOME}/.claude:/root/.claude
-      - ${HOME}/.claude.json:/root/.claude.json
     depends_on:
       dojang-sql:
         condition: service_healthy

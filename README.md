@@ -33,7 +33,9 @@ cd build && docker compose up -d
 > ```bash
 > docker exec -it dojang-app claude /login
 > ```
-> 호스트의 `~/.claude/` 와 `~/.claude.json` 이 컨테이너에 마운트되어 있어서, 한 번 로그인하면 토큰이 호스트 파일에 떨어지고 컨테이너 재시작 후에도 영속됩니다. macOS 는 자격증명이 keychain 에 있어서 자동 인계가 안 되기 때문에 OAuth 흐름이 한 번 필요하고, Linux 는 보통 호스트의 `~/.claude/.credentials.json` 이 그대로 공유돼서 즉시 동작합니다.
+> 호스트의 `~/.claude/` 디렉토리가 컨테이너에 마운트되어 OAuth 토큰 (`.credentials.json`) 이 그대로 공유됩니다. Linux 호스트는 보통 호스트 claude 의 자격증명이 그대로 인계되어 별도 단계 없이 동작하고, macOS 는 자격증명이 keychain 에 있어서 첫 실행 시 한 번 컨테이너 안에서 OAuth 가 필요합니다. 한 번 로그인 후엔 컨테이너 재시작에도 영속됩니다.
+>
+> 컨테이너의 `~/.claude.json` (config 파일) 은 호스트와 분리되어 `dojang-data` 볼륨 안에 자체 영속됩니다 — 호스트 macOS 의 atomic rewrite + OS-specific install 메타데이터가 컨테이너에서 race / mismatch 를 일으키기 때문.
 
 ### 컨트리뷰터: 핫리로드
 

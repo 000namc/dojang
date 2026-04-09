@@ -27,6 +27,11 @@ COPY src/backend/ src/backend/
 COPY build/ build/
 COPY --from=frontend /build/dist static/
 
+# /root/.claude.json 을 dojang-data 볼륨으로 redirect — 호스트 ~/.claude.json 과
+# 분리해서 macOS atomic-rewrite race / installMethod mismatch 를 회피하면서도
+# 컨테이너 재시작에도 살아남게 한다. Node fs 가 symlink 를 따라가서 write 함.
+RUN ln -sf /app/data/claude.json /root/.claude.json
+
 EXPOSE 8010
 ENV PYTHONUNBUFFERED=1
 
