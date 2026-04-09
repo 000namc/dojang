@@ -26,11 +26,12 @@ const TOPIC_EDGE: Record<string, string> = {
 };
 const DEFAULT_EDGE = "#5a6a8a";
 
-// 노드는 부드러운 흑백 — 너무 밝지 않게
+// 노드는 배경에 가까운 어두운 색 — GlowLayer (screen blend) 가 twinkle 에 따라 밝혀줌.
+// 별 자체가 밝으면 glow 가 꺼져도 항상 밝아 보여서 깜빡임 효과가 안 나옴.
 const STAR_COLORS = {
-  topic: "#d4d8ec",
-  subject: "#9aa0b8",
-  satellite: "#5c6280",
+  topic: "#1e2240",
+  subject: "#161a36",
+  satellite: "#0e1028",
 };
 
 // ── 별자리 stick figure 데이터 (정규화 -1 ~ 1) ─────────────────────────
@@ -934,18 +935,20 @@ function GlowLayer() {
         if (glowR < 2) return;
 
         const grad = ctx.createRadialGradient(view.x, view.y, 0, view.x, view.y, glowR);
+        // node 자체가 어두운 색이라 glow (screen blend) 가 별의 유일한 밝기 원천.
+        // alpha 를 높여서 twinkle max 에서 확실히 밝게.
         if (kind === "topic") {
-          grad.addColorStop(0, `rgba(220, 230, 255, ${0.38 * twinkle})`);
-          grad.addColorStop(0.12, `rgba(200, 210, 250, ${0.2 * twinkle})`);
-          grad.addColorStop(0.35, `rgba(150, 170, 230, ${0.07 * twinkle})`);
+          grad.addColorStop(0, `rgba(220, 230, 255, ${0.75 * twinkle})`);
+          grad.addColorStop(0.1, `rgba(200, 215, 255, ${0.45 * twinkle})`);
+          grad.addColorStop(0.3, `rgba(150, 170, 230, ${0.15 * twinkle})`);
           grad.addColorStop(1, "rgba(255, 255, 255, 0)");
         } else if (kind === "subject") {
-          grad.addColorStop(0, `rgba(200, 210, 240, ${0.22 * twinkle})`);
-          grad.addColorStop(0.2, `rgba(160, 180, 220, ${0.1 * twinkle})`);
+          grad.addColorStop(0, `rgba(200, 210, 240, ${0.55 * twinkle})`);
+          grad.addColorStop(0.15, `rgba(170, 190, 230, ${0.25 * twinkle})`);
           grad.addColorStop(1, "rgba(255, 255, 255, 0)");
         } else {
-          grad.addColorStop(0, `rgba(180, 190, 220, ${0.12 * twinkle})`);
-          grad.addColorStop(0.4, `rgba(160, 170, 200, ${0.04 * twinkle})`);
+          grad.addColorStop(0, `rgba(180, 190, 220, ${0.3 * twinkle})`);
+          grad.addColorStop(0.3, `rgba(160, 170, 200, ${0.08 * twinkle})`);
           grad.addColorStop(1, "rgba(255, 255, 255, 0)");
         }
         ctx.fillStyle = grad;
