@@ -260,6 +260,11 @@ export default function Subjects({ className, onNavigateToLearn }: SubjectsProps
                   </div>
                 ) : (
                   <>
+                    <ClusterEyebrow
+                      currentClusterId={d.cluster_id}
+                      clusters={clusters}
+                      onAssign={(cid) => handleAssignTopicToCluster(d.id, cid)}
+                    />
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-bold text-gray-900 dark:text-gray-100">{d.name}</h3>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -284,20 +289,13 @@ export default function Subjects({ className, onNavigateToLearn }: SubjectsProps
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
                       {d.description || "No description"}
                     </p>
-                    <div className="flex items-center justify-between gap-2">
-                      <button
-                        onClick={() => handleEnter(d.id)}
-                        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
-                      >
-                        Enter
-                        <ArrowRight size={14} />
-                      </button>
-                      <ClusterChip
-                        currentClusterId={d.cluster_id}
-                        clusters={clusters}
-                        onAssign={(cid) => handleAssignTopicToCluster(d.id, cid)}
-                      />
-                    </div>
+                    <button
+                      onClick={() => handleEnter(d.id)}
+                      className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors"
+                    >
+                      Enter
+                      <ArrowRight size={14} />
+                    </button>
                   </>
                 )}
               </div>
@@ -366,8 +364,8 @@ export default function Subjects({ className, onNavigateToLearn }: SubjectsProps
   );
 }
 
-// ── Topic 카드 우하단의 cluster chip — 항상 보이며 클릭하면 cluster 변경 드롭다운 ──
-function ClusterChip({
+// ── Topic 카드 헤더 위 cluster eyebrow — uppercase 작은 라벨, 카드 본문의 일부처럼 ──
+function ClusterEyebrow({
   currentClusterId,
   clusters,
   onAssign,
@@ -379,22 +377,21 @@ function ClusterChip({
   const [open, setOpen] = useState(false);
   const current = clusters.find((c) => c.id === currentClusterId);
   return (
-    <div className="relative">
+    <div className="relative -mt-1 mb-1.5">
       <button
         onClick={(e) => {
           e.stopPropagation();
           setOpen(!open);
         }}
         title="클러스터 변경"
-        className="inline-flex items-center gap-1 rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 px-2 py-0.5 text-[11px] text-gray-500 dark:text-gray-400 hover:border-primary-300 dark:hover:border-primary-700 hover:text-primary-600 dark:hover:text-primary-400 transition-colors max-w-[120px]"
+        className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
       >
-        <Folder size={10} className="shrink-0" />
-        <span className="truncate">{current?.name ?? "Unsorted"}</span>
+        <span className="truncate max-w-[180px]">{current?.name ?? "Unsorted"}</span>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 bottom-full mb-1 z-20 min-w-[140px] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
+          <div className="absolute left-0 top-full mt-1 z-20 min-w-[140px] rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 py-1 shadow-lg">
             <div className="px-3 py-1 text-[10px] uppercase text-gray-400">클러스터로 이동</div>
             {clusters.map((c) => (
               <button
