@@ -112,6 +112,13 @@ async def delete_topic(topic_id: int, db: aiosqlite.Connection = Depends(get_db)
 
         await db.execute(f"DELETE FROM subjects WHERE curriculum_id IN ({ph})", curriculum_ids)
         await db.execute(f"DELETE FROM checkpoints WHERE curriculum_id IN ({ph})", curriculum_ids)
+        # topics.default_curriculum_id → curricula.id FK 가 걸려 있어서 curricula 를
+        # 먼저 삭제하면 이 토픽의 default_curriculum_id 참조 때문에 실패한다.
+        # 참조를 끊은 뒤 삭제.
+        await db.execute(
+            "UPDATE topics SET default_curriculum_id = NULL WHERE id = ?",
+            (topic_id,),
+        )
         await db.execute(f"DELETE FROM curricula WHERE topic_id = ?", (topic_id,))
 
     # Delete topic-level knowledge, notebooks, chat sessions/messages
