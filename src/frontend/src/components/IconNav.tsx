@@ -1,8 +1,8 @@
-import { Home, GraduationCap, Layers, Compass, Settings, Sun, Moon, PenLine } from "lucide-react";
+import { Home, GraduationCap, Layers, Compass, BookOpen, Sun, Moon, PenLine } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useTheme } from "../stores/theme";
 
-export type ViewType = "home" | "sketch" | "learn" | "subjects" | "explore";
+export type ViewType = "home" | "sketch" | "learn" | "subjects" | "explore" | "guide";
 
 interface IconNavProps {
   activeView: ViewType;
@@ -16,6 +16,7 @@ const navItems: { view: ViewType; icon: typeof Home; label: string }[] = [
   { view: "learn", icon: GraduationCap, label: "Learn" },
   { view: "subjects", icon: Layers, label: "Topics" },
   { view: "explore", icon: Compass, label: "Explore" },
+  { view: "guide", icon: BookOpen, label: "Guide" },
 ];
 
 export default function IconNav({ activeView, onViewChange, className }: IconNavProps) {
@@ -44,16 +45,6 @@ export default function IconNav({ activeView, onViewChange, className }: IconNav
           <span className="text-[10px] font-medium leading-none">{label}</span>
         </button>
       ))}
-
-      <button
-        className={cn(
-          "flex flex-col items-center gap-1 rounded-xl px-2 py-2 transition-colors w-14",
-          "text-gray-400 dark:text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-600 dark:hover:text-gray-300",
-        )}
-      >
-        <Settings size={22} />
-        <span className="text-[10px] font-medium leading-none">Settings</span>
-      </button>
 
       <div className="flex-1" />
 

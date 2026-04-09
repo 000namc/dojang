@@ -5,6 +5,7 @@ import Sketch from "./pages/Sketch";
 import Learn from "./pages/Learn";
 import Subjects from "./pages/Subjects";
 import Explore from "./pages/Explore";
+import Guide from "./pages/Guide";
 import TerminalPanel from "./components/TerminalPanel";
 import type { ViewType } from "./components/IconNav";
 
@@ -15,7 +16,9 @@ export default function App() {
 
   // Sketch는 자체 per-sketch 터미널을 가지므로 글로벌 도크 제외
   // Home은 자체 워크스페이스 플로우가 있으므로 제외
-  const showTerminalDock = currentView !== "home" && currentView !== "sketch";
+  // Guide는 읽기 전용 문서라 도크 제외
+  const showTerminalDock =
+    currentView !== "home" && currentView !== "sketch" && currentView !== "guide";
 
   return (
     <div className="flex h-screen">
@@ -31,6 +34,8 @@ export default function App() {
           <Subjects className="h-full" onNavigateToLearn={switchToLearn} />
         ) : currentView === "explore" ? (
           <Explore className="h-full" />
+        ) : currentView === "guide" ? (
+          <Guide className="h-full" />
         ) : null}
       </main>
 
