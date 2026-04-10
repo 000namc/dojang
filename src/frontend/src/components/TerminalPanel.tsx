@@ -121,13 +121,26 @@ export default function TerminalPanel({
     );
     wsRef.current = ws;
 
+    // 유효한 (유한 정수 + 양수) 치수만 백엔드로 보낸다. xterm 컨테이너가
+    // display:none 으로 0×0 이 되면 proposeDimensions 가 NaN/Infinity 를
+    //돌려줄 수 있는데, 그걸 그대로 보내면 백엔드의 struct.pack 이 터져서
+    // WebSocket 이 강제로 닫히고 `[session ended]` 가 찍힌다.
+    const sendResize = () => {
+      const dims = fitAddon.proposeDimensions();
+      if (!dims) return;
+      const { cols, rows } = dims;
+      if (!Number.isFinite(cols) || !Number.isFinite(rows)) return;
+      if (cols <= 0 || rows <= 0) return;
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(
+        JSON.stringify({ type: "resize", cols: Math.floor(cols), rows: Math.floor(rows) }),
+      );
+    };
+
     ws.onopen = () => {
       setConnected(true);
       onActiveChange?.(true);
-      const dims = fitAddon.proposeDimensions();
-      if (dims) {
-        ws.send(JSON.stringify({ type: "resize", cols: dims.cols, rows: dims.rows }));
-      }
+      sendResize();
     };
 
     ws.onmessage = (event) => {
@@ -156,11 +169,15 @@ export default function TerminalPanel({
     });
 
     const handleResize = () => {
+      // 탭 전환으로 터미널 컨테이너가 display:none 이 되는 순간 ResizeObserver 가
+      // 0×0 으로 발화한다. 이 상태에서 fit() 을 돌리면 cellWidth 가 0 으로
+      // 떨어지고 proposeDimensions 가 Infinity 를 반환 → 백엔드 크래시 루트.
+      // 보이지 않는 크기에서는 아예 fit 을 건너뛰고, 다음에 다시 보일 때 기존
+      // 치수 그대로 돌아간다.
+      const el = terminalRef.current;
+      if (!el || el.clientWidth <= 0 || el.clientHeight <= 0) return;
       fitAddon.fit();
-      const dims = fitAddon.proposeDimensions();
-      if (dims && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "resize", cols: dims.cols, rows: dims.rows }));
-      }
+      sendResize();
     };
 
     const resizeObserver = new ResizeObserver(handleResize);

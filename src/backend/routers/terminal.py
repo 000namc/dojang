@@ -428,8 +428,18 @@ async def terminal_websocket(
             if "text" in msg:
                 data = json.loads(msg["text"])
                 if data.get("type") == "resize":
-                    cols = data.get("cols", 120)
-                    rows = data.get("rows", 30)
+                    # 프론트에서 간혹 NaN/Infinity 가 들어온다 (탭 전환으로 xterm
+                    # 컨테이너가 display:none → 0×0 이 되면 proposeDimensions 가
+                    # cellWidth=0 나눗셈 때문에 비정상 값을 뱉는 경우). 그대로
+                    # struct.pack 하면 예외가 핸들러를 탈출해 WS 가 닫히고
+                    # tmux 세션까지 detach 된다. 유효하지 않은 크기는 조용히 무시.
+                    try:
+                        cols = int(data.get("cols", 120))
+                        rows = int(data.get("rows", 30))
+                    except (TypeError, ValueError):
+                        continue
+                    if not (0 < cols <= 1000 and 0 < rows <= 1000):
+                        continue
                     winsize = struct.pack("HHHH", rows, cols, 0, 0)
                     fcntl.ioctl(master_fd, termios.TIOCSWINSZ, winsize)
                 elif data.get("type") == "input":
