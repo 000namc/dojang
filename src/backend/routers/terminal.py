@@ -167,6 +167,13 @@ def _tmux_sketch_session_name(sketch_id: int) -> str:
     return f"dojang-sketch-{sketch_id}"
 
 
+def _tmux_curriculum_session_name(curriculum_id: int) -> str:
+    """Learn 탭의 글로벌 dock 은 선택된 curriculum 단위로 tmux 세션을 가진다.
+    topic 을 바꾸면 cascading 으로 curriculum 이 바뀌고 → 여기서 이름이 달라져서
+    자연스럽게 새 세션으로 전환된다."""
+    return f"dojang-curriculum-{curriculum_id}"
+
+
 # 컨테이너의 Claude Code 세션이 /app/CLAUDE.md 를 자동으로 시스템 프롬프트에
 # 주입받도록 한다 — 세션이 "맥락" 질문을 받았을 때 data/current_context.md 를
 # 읽어 학습자가 지금 뭘 보고 있는지 답하게 만드는 게 목적.
@@ -189,10 +196,16 @@ sketch 노트, 연습문제, 지식 카드 같은 걸 열어놓고 당신과 대
 - 사용자가 "이거", "이 문제", "여기" 같이 지시대명사로 무언가를 가리킬 때
 
 파일 포맷:
+- `@curriculum:<제목> #<id> (topic: <토픽명>)` — 학습자가 Learn 탭에서 선택한
+  커리큘럼. 구체 항목을 아직 안 눌렀어도 이 줄은 있을 수 있습니다. 커리큘럼
+  전체 맥락을 보려면 `get_curriculum` MCP 도구로 트리를 가져오세요.
 - `@sketch:<제목> #<id>` + 본문 — 학습자가 열어둔 sketch 노트
 - `@exercise:<제목> #<id>` — 학습자가 클릭한 연습문제
 - `@knowledge:<제목> #<id>` — 학습자가 클릭한 지식 카드
 - `> <인용>` — 학습자가 드래그해서 추가한 관심 포인트
+
+여러 줄이 같이 있을 수 있습니다. 예를 들어 `@curriculum:...` 과 `@exercise:...`
+이 함께 있으면 "이 커리큘럼 안의 이 문제를 보고 있다" 는 뜻입니다.
 
 파일이 비어있으면 지금 활성 맥락이 없다는 뜻입니다.
 
@@ -200,8 +213,53 @@ sketch 노트, 연습문제, 지식 카드 같은 걸 열어놓고 당신과 대
 
 커리큘럼/연습문제/지식을 조작할 때는 `dojang` MCP 서버의 도구를 쓰세요:
 `get_curriculum`, `add_subject`, `create_exercise`, `create_curriculum`,
-`save_knowledge`, `list_knowledge`, `execute_code`, `get_progress`. 데이터
-변경 후 UI 갱신은 각 도구가 내부적으로 처리하므로 별도 알림 호출은 필요 없어요.
+`save_knowledge`, `list_knowledge`, `review_curriculum`, `execute_code`,
+`get_progress`. 데이터 변경 후 UI 갱신은 각 도구가 내부적으로 처리하므로
+별도 알림 호출은 필요 없어요.
+
+## 커리큘럼을 새로 만들 때 (중요)
+
+사용자가 "X 커리큘럼 만들어줘" / "X 가르쳐줘" / "X 배우고 싶어" 같은 요청을
+했을 때, **절대 한 번에 모든 걸 만들지 마세요**. 3단계로 진행합니다.
+
+### 1단계 — 목차 먼저 제안 (MCP 도구 호출 금지)
+
+먼저 대략적인 구조를 텍스트로 제안하고 사용자의 승인을 받으세요:
+- **3~4개의 Part** 로 묶기 (예: "Part I. 기초" → "Part II. 핵심" → "Part III. 실전")
+- 각 Part 아래 **3~5개 subject**
+- 총 subject 수는 대략 10~15개 사이
+- 이 단계에서 `create_curriculum` / `add_subject` 를 부르면 안 됩니다
+- "이 구조 어때요? 대상 수준이나 분량 조절이 필요하면 말씀해주세요" 로 마무리
+
+### 2단계 — 확정 후 실제 생성
+
+사용자가 구조를 승인하면:
+
+1. `create_curriculum` 으로 커리큘럼 컨테이너 생성
+2. 각 Part 를 `add_subject(parent_id=None)` 로 생성 — 이게 상위 subject
+3. 각 Part 아래에 학습 주제를 `add_subject(parent_id=<part 의 id>)` 로 생성
+4. 각 학습 subject 마다:
+   - `save_knowledge` 로 **2~4개** 지식 카드. 서로 다른 각도로:
+     *개념 정의 / 왜 그렇게 설계됐나 / 어떻게 동작하나 / 흔한 함정* 중 골라쓰기.
+     한 카드에 모든 걸 욱여넣지 말고 각도별로 분리.
+   - `create_exercise` 로 **2~3개** 연습문제를 ladder 로:
+     - drill (`check_type="output_match"`, `difficulty=1`): 개념 확인 드릴
+     - apply (`check_type="ai_check"`, `difficulty=2`): 실제 상황 적용
+     - extend (`check_type="ai_check"`, `difficulty=3`, 선택): 응용/변형
+
+### 3단계 — 자기 점검 (필수)
+
+생성이 끝나면 **반드시** `review_curriculum(curriculum_id=<방금 만든 id>)`
+를 호출하세요. 반환되는 `warnings` 배열이 비어있지 않으면 지적된 문제를
+보강한 뒤 다시 review 하세요. "Looks good" 하나만 나올 때까지 반복.
+
+품질 기준 요약:
+- parent_id 가 있는 subject 가 없는 subject 보다 많아야 함 (= 계층이 존재)
+- 리프 subject 당 knowledge ≥ 2, exercise ≥ 2
+- 난이도와 check_type 에 다양성
+
+기존 CLI / Git / Docker / SQL 커리큘럼은 이 원칙 이전에 만들어진 flat 구조
+입니다. 앞으로 만드는 커리큘럼이 같은 실수를 반복하지 않게 해주세요.
 """
 
 
@@ -226,13 +284,14 @@ def _ensure_container_claude_md() -> None:
 def _build_spawn_command(
     agent: str,
     sketch_id: int | None = None,
+    curriculum_id: int | None = None,
     resume_session: str | None = None,
 ) -> list[str]:
     """Return the CLI command to spawn for the given agent type.
 
-    Sketch 터미널 (sketch_id 가 있는 경우) 은 tmux 로 감싸서 WS 재연결 사이에
-    세션과 스크롤백이 유지되게 한다. 기존 tmux 세션이 있으면 attach 하고,
-    없으면 새로 만든다. 전역 (Learn) 터미널은 현재 동작 유지.
+    sketch_id 나 curriculum_id 가 있으면 tmux 로 감싸서 WS 재연결 사이에 세션과
+    스크롤백이 유지되게 한다. sketch 가 curriculum 보다 우선 (sketch 탭은 sketch
+    세션만 가지면 됨). 둘 다 없으면 tmux 없이 일반 claude 프로세스로 돌림.
     """
     if agent == "opencode":
         _ensure_opencode_config()
@@ -244,10 +303,15 @@ def _build_spawn_command(
     if resume_session:
         claude_cmd += ["--resume", resume_session]
 
-    if sketch_id is None:
+    session_name: str | None = None
+    if sketch_id is not None:
+        session_name = _tmux_sketch_session_name(sketch_id)
+    elif curriculum_id is not None:
+        session_name = _tmux_curriculum_session_name(curriculum_id)
+
+    if session_name is None:
         return claude_cmd
 
-    session_name = _tmux_sketch_session_name(sketch_id)
     if _tmux_has_session(session_name):
         # 살아있는 tmux 세션 재접속 — 다른 client 는 강제 detach (-d) 해서
         # 동시 접속으로 인한 이상한 리사이즈 방지.
@@ -275,6 +339,7 @@ async def terminal_websocket(
     ws: WebSocket,
     agent: str = Query(default="claude"),
     sketch_id: int | None = Query(default=None),
+    curriculum_id: int | None = Query(default=None),
 ):
     await ws.accept()
 
@@ -282,20 +347,26 @@ async def terminal_websocket(
         await ws.close(code=4000, reason=f"Unknown agent: {agent}")
         return
 
-    # Per-sketch session tracking (claude only)
+    # Per-scope session tracking (claude only). sketch_id 가 우선 — Sketch 탭은
+    # curriculum 무관. curriculum_id 는 Learn / Subjects / Explore 탭의 글로벌
+    # dock 에서만 설정된다.
     resume_session: str | None = None
     pre_sessions: set[str] = set()
     detect_task: asyncio.Task | None = None
     tmux_session_name: str | None = None
-    if agent == "claude" and sketch_id is not None:
-        resume_session = await _get_sketch_session(sketch_id)
-        if resume_session is None:
-            pre_sessions = _list_session_uuids()  # 새 세션이면 spawn 후 diff로 잡음
-        tmux_session_name = _tmux_sketch_session_name(sketch_id)
+    if agent == "claude":
+        if sketch_id is not None:
+            resume_session = await _get_sketch_session(sketch_id)
+            if resume_session is None:
+                pre_sessions = _list_session_uuids()  # 새 세션이면 spawn 후 diff로 잡음
+            tmux_session_name = _tmux_sketch_session_name(sketch_id)
+        elif curriculum_id is not None:
+            tmux_session_name = _tmux_curriculum_session_name(curriculum_id)
 
     cmd = _build_spawn_command(
         agent,
         sketch_id=sketch_id if agent == "claude" else None,
+        curriculum_id=curriculum_id if agent == "claude" else None,
         resume_session=resume_session,
     )
     binary = shutil.which(cmd[0])
