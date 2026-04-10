@@ -363,6 +363,164 @@ def _create_curriculum(args: dict) -> dict:
         db.close()
 
 
+def _review_curriculum(args: dict) -> dict:
+    """커리큘럼의 구조 품질을 분석해 warnings 리스트와 통계를 반환한다.
+
+    Claude 가 커리큘럼을 만든 직후 자기 점검용으로 호출하는 도구. flat 구조,
+    노트/실습 밀도 부족, 난이도/check_type 편향, 빈 subject 등을 감지한다.
+    """
+    curriculum_id = args["curriculum_id"]
+    db = get_db()
+    try:
+        cur = db.execute(
+            "SELECT id, name FROM curricula WHERE id = ?", (curriculum_id,)
+        ).fetchone()
+        if not cur:
+            return {"error": f"Curriculum id {curriculum_id} not found"}
+
+        subjects = db.execute(
+            "SELECT id, name, parent_id FROM subjects WHERE curriculum_id = ? ORDER BY parent_id, order_num",
+            (curriculum_id,),
+        ).fetchall()
+
+        if not subjects:
+            return {
+                "curriculum_id": curriculum_id,
+                "name": cur["name"],
+                "stats": {"total_subjects": 0},
+                "warnings": ["Curriculum is empty — no subjects yet."],
+            }
+
+        subject_ids = [s["id"] for s in subjects]
+        has_children: set[int] = set()
+        for s in subjects:
+            if s["parent_id"] is not None:
+                has_children.add(s["parent_id"])
+
+        top_level = [s for s in subjects if s["parent_id"] is None]
+        sub_level = [s for s in subjects if s["parent_id"] is not None]
+        parts = [s for s in top_level if s["id"] in has_children]
+        leaves = [s for s in subjects if s["id"] not in has_children]
+
+        placeholders = ",".join("?" * len(subject_ids))
+        knowledge_counts: dict[int, int] = {
+            row["subject_id"]: row["c"]
+            for row in db.execute(
+                f"SELECT subject_id, COUNT(*) as c FROM knowledge "
+                f"WHERE subject_id IN ({placeholders}) GROUP BY subject_id",
+                subject_ids,
+            ).fetchall()
+        }
+        exercise_rows = db.execute(
+            f"SELECT subject_id, difficulty, check_type FROM exercises "
+            f"WHERE subject_id IN ({placeholders})",
+            subject_ids,
+        ).fetchall()
+
+        exercise_counts: dict[int, int] = {}
+        difficulty_spread: dict[str, int] = {}
+        check_type_spread: dict[str, int] = {}
+        for row in exercise_rows:
+            sid = row["subject_id"]
+            exercise_counts[sid] = exercise_counts.get(sid, 0) + 1
+            diff_key = str(row["difficulty"])
+            difficulty_spread[diff_key] = difficulty_spread.get(diff_key, 0) + 1
+            ct = row["check_type"]
+            check_type_spread[ct] = check_type_spread.get(ct, 0) + 1
+
+        leaf_knowledge = [knowledge_counts.get(s["id"], 0) for s in leaves]
+        leaf_exercises = [exercise_counts.get(s["id"], 0) for s in leaves]
+        avg_knowledge = sum(leaf_knowledge) / len(leaves) if leaves else 0.0
+        avg_exercises = sum(leaf_exercises) / len(leaves) if leaves else 0.0
+
+        empty_knowledge = [
+            {"id": s["id"], "name": s["name"]}
+            for s in leaves
+            if knowledge_counts.get(s["id"], 0) == 0
+        ]
+        empty_exercises = [
+            {"id": s["id"], "name": s["name"]}
+            for s in leaves
+            if exercise_counts.get(s["id"], 0) == 0
+        ]
+
+        warnings: list[str] = []
+
+        if len(parts) == 0 and len(top_level) > 5:
+            warnings.append(
+                f"Flat structure: {len(top_level)} top-level subjects, 0 Parts. "
+                "Group into 2-4 Parts — create top-level parent subjects first "
+                "(add_subject with parent_id=None) and move learning subjects "
+                "under them via add_subject(parent_id=<part_id>)."
+            )
+        elif len(parts) > 0 and len(sub_level) < len(top_level):
+            warnings.append(
+                f"Partial hierarchy: only {len(sub_level)} subjects have a parent "
+                f"out of {len(subjects)} total. Aim for most learning subjects to "
+                "live under a Part."
+            )
+
+        if avg_knowledge < 1.5 and leaves:
+            warnings.append(
+                f"Knowledge density low (avg {avg_knowledge:.1f} notes per leaf subject). "
+                "Aim for 2-4 knowledge cards per subject covering different angles "
+                "(concept / rationale / mechanism / pitfalls)."
+            )
+
+        if avg_exercises < 1.5 and leaves:
+            warnings.append(
+                f"Exercise density low (avg {avg_exercises:.1f} exercises per leaf subject). "
+                "Aim for 2-3 exercises per subject as a ladder (drill -> apply -> extend)."
+            )
+
+        if check_type_spread and len(check_type_spread) == 1:
+            only_type = next(iter(check_type_spread))
+            warnings.append(
+                f"All exercises use check_type='{only_type}'. Mix auto-gradable "
+                "drills (output_match / query_match / script_check) with ai_check "
+                "to create a learning ladder."
+            )
+
+        if difficulty_spread and len(difficulty_spread) == 1:
+            only_diff = next(iter(difficulty_spread))
+            warnings.append(
+                f"All exercises at difficulty {only_diff}. Spread across 1 (drill), "
+                "2 (apply), and 3 (extend) so learners have warm-ups and challenges."
+            )
+
+        if empty_knowledge:
+            sample = ", ".join(f"#{s['id']} {s['name']}" for s in empty_knowledge[:5])
+            extra = f" (+{len(empty_knowledge) - 5} more)" if len(empty_knowledge) > 5 else ""
+            warnings.append(f"Leaf subjects without knowledge cards: {sample}{extra}")
+
+        if empty_exercises:
+            sample = ", ".join(f"#{s['id']} {s['name']}" for s in empty_exercises[:5])
+            extra = f" (+{len(empty_exercises) - 5} more)" if len(empty_exercises) > 5 else ""
+            warnings.append(f"Leaf subjects without exercises: {sample}{extra}")
+
+        if not warnings:
+            warnings.append("Looks good. No structural issues detected.")
+
+        return {
+            "curriculum_id": curriculum_id,
+            "name": cur["name"],
+            "stats": {
+                "parts": len(parts),
+                "top_level_subjects": len(top_level),
+                "sub_level_subjects": len(sub_level),
+                "total_subjects": len(subjects),
+                "leaf_subjects": len(leaves),
+                "avg_knowledge_per_leaf": round(avg_knowledge, 2),
+                "avg_exercises_per_leaf": round(avg_exercises, 2),
+                "difficulty_spread": difficulty_spread,
+                "check_type_spread": check_type_spread,
+            },
+            "warnings": warnings,
+        }
+    finally:
+        db.close()
+
+
 def _create_topic(args: dict) -> dict:
     db = get_db()
     try:
@@ -414,15 +572,31 @@ TOOL_REGISTRY: list[dict] = [
     },
     {
         "name": "add_subject",
-        "description": "커리큘럼에 새로운 과목(서브젝트)을 추가합니다. curriculum_id를 지정하면 해당 커리큘럼에, 생략하면 주제(토픽)의 기본 커리큘럼에 추가됩니다.",
+        "description": (
+            "커리큘럼에 과목(서브젝트)을 추가합니다.\n\n"
+            "좋은 커리큘럼은 2단계 계층입니다 — 먼저 parent_id=None 으로 "
+            "Part 성격의 상위 subject 를 3~4개 만든 뒤 (예: 'Part I. 요청/응답의 경계'), "
+            "그 아래에 parent_id=<part 의 id> 로 실제 학습 주제를 겁니다. "
+            "flat 구조 (parent_id 없는 subject 만 나열) 는 피하세요.\n\n"
+            "curriculum_id 를 지정하면 해당 커리큘럼에, 생략하면 주제(토픽)의 기본 "
+            "커리큘럼에 추가됩니다."
+        ),
         "schema": {
             "type": "object",
             "properties": {
                 "topic": {"type": "string", "description": "주제(토픽) 이름 (curriculum_id 미지정 시 필수)"},
                 "curriculum_id": {"type": "integer", "description": "커리큘럼 ID (create_curriculum 결과에서 받은 id)"},
-                "name": {"type": "string", "description": "과목(서브젝트) 이름"},
+                "name": {"type": "string", "description": "과목(서브젝트) 이름. 상위(Part)면 'Part I. 기초' 같은 형태, 하위면 구체 주제명."},
                 "description": {"type": "string", "description": "과목(서브젝트) 설명", "default": ""},
-                "parent_id": {"type": "integer", "description": "상위 과목(서브젝트) ID (하위로 만들 때)"},
+                "parent_id": {
+                    "type": "integer",
+                    "description": (
+                        "상위 subject ID. 계층 구조의 핵심 파라미터. "
+                        "Part 성격의 상위 subject 는 None (미지정), "
+                        "실제 학습 주제는 해당 Part 의 id 를 넣으세요. "
+                        "10개 이상의 subject 를 모두 parent_id=None 으로 만들면 flat 구조가 되어 품질이 떨어집니다."
+                    ),
+                },
             },
             "required": ["name"],
         },
@@ -444,7 +618,19 @@ TOOL_REGISTRY: list[dict] = [
     },
     {
         "name": "create_exercise",
-        "description": "새로운 연습 문제를 생성합니다. 학습자 수준에 맞춰 만들어주세요.",
+        "description": (
+            "과목(서브젝트)에 연습 문제를 생성합니다.\n\n"
+            "한 subject 당 1개만 만들면 학습 리듬이 단조로워집니다. "
+            "**2~3개를 ladder 로** 배치하세요:\n"
+            "- drill (check_type='output_match' 또는 'query_match', difficulty=1): "
+            "개념을 곧바로 확인하는 짧은 드릴. 자동 채점 가능한 형태.\n"
+            "- apply (check_type='ai_check', difficulty=2): 실제 상황을 시뮬레이션하는 "
+            "실습. drill 보다 호흡이 길다.\n"
+            "- extend (check_type='ai_check', difficulty=3, 선택): 응용/변형. "
+            "꼭 필요한 subject 에만.\n\n"
+            "같은 subject 안 exercise 들의 check_type 과 difficulty 를 다양화하는 것이 "
+            "한 subject 에 여러 개를 넣는 것만큼이나 중요합니다."
+        ),
         "schema": {
             "type": "object",
             "properties": {
@@ -455,10 +641,18 @@ TOOL_REGISTRY: list[dict] = [
                 "check_type": {
                     "type": "string",
                     "enum": ["output_match", "query_match", "script_check", "ai_check"],
-                    "description": "정답 확인 방식: query_match(SQL결과비교), output_match(출력비교), script_check(스크립트검증), ai_check(AI평가)",
+                    "description": (
+                        "정답 확인 방식. drill 단계면 output_match/query_match/script_check "
+                        "중 하나 (자동 채점), apply/extend 단계면 ai_check (LLM 평가). "
+                        "한 subject 안에서 ai_check 만 쓰지 말고 섞으세요."
+                    ),
                 },
                 "check_value": {"type": "string", "description": "정답 확인용 쿼리/스크립트/예상출력", "default": ""},
-                "difficulty": {"type": "integer", "description": "난이도 1-5", "default": 1},
+                "difficulty": {
+                    "type": "integer",
+                    "description": "난이도 1-5. 1=drill, 2=apply, 3=extend. 한 subject 내에서 섞어쓰기.",
+                    "default": 1,
+                },
                 "ui_type": {
                     "type": "string",
                     "enum": ["auto", "terminal", "code", "text"],
@@ -510,14 +704,31 @@ TOOL_REGISTRY: list[dict] = [
     },
     {
         "name": "save_knowledge",
-        "description": "학습 중 중요한 개념이나 지식을 저장합니다.",
+        "description": (
+            "과목(서브젝트)에 지식 카드(노트)를 저장합니다.\n\n"
+            "한 subject 에는 **2~4개** 카드를 서로 다른 각도로 작성하세요. 추천 각도:\n"
+            "- 개념 정의 — 이게 뭐고 왜 필요한가\n"
+            "- 설계 의도 — 왜 이 방식으로 만들어졌나 (원칙, 트레이드오프)\n"
+            "- 내부 메커니즘 — 실제로 어떻게 동작하나\n"
+            "- 흔한 함정 — 놓치기 쉬운 포인트, 오해\n"
+            "- 비교 — 비슷한 개념들과의 차이\n\n"
+            "카드 하나에 모든 각도를 욱여넣으려 하지 말고 각도별로 분리하세요. "
+            "각 카드는 한 주제에 대한 한 관점의 에세이로 작성하는 것이 학습에 유리합니다. "
+            "저장 시 반드시 `subject_id` 를 지정해서 해당 subject 에 연결하세요."
+        ),
         "schema": {
             "type": "object",
             "properties": {
                 "topic": {"type": "string", "description": "관련 주제(토픽) 이름"},
-                "subject_id": {"type": "integer", "description": "과목(서브젝트) ID"},
-                "title": {"type": "string", "description": "지식 카드 제목"},
-                "content": {"type": "string", "description": "핵심 내용 (마크다운)"},
+                "subject_id": {
+                    "type": "integer",
+                    "description": "과목(서브젝트) ID. 커리큘럼 생성 시에는 거의 항상 지정해야 합니다.",
+                },
+                "title": {
+                    "type": "string",
+                    "description": "지식 카드 제목. 어떤 각도의 카드인지 드러나게 쓰세요 (예: '왜 Depends 는 데코레이터가 아닌가' — 설계 의도).",
+                },
+                "content": {"type": "string", "description": "핵심 내용 (마크다운). 한 관점에 집중."},
                 "tags": {"type": "string", "description": "태그들 (쉼표 구분)"},
             },
             "required": ["title", "content"],
@@ -526,17 +737,48 @@ TOOL_REGISTRY: list[dict] = [
     },
     {
         "name": "create_curriculum",
-        "description": "주제(토픽) 안에 새로운 커리큘럼을 만듭니다. 커리큘럼은 과목(서브젝트)들을 담는 폴더입니다.",
+        "description": (
+            "주제(토픽) 안에 새로운 커리큘럼을 만듭니다. 커리큘럼은 과목(서브젝트)들을 "
+            "담는 최상위 컨테이너입니다.\n\n"
+            "**중요**: 사용자가 '커리큘럼 만들어줘' 라고 했을 때 곧바로 이 도구를 부르지 "
+            "마세요. 먼저 목차 구조 (Part × Subject 트리) 를 **텍스트로 제안하고 승인을 "
+            "받은 뒤** 실행하세요. 자세한 절차는 CLAUDE.md 의 '커리큘럼을 새로 만들 때' "
+            "섹션을 따르세요. 이 도구를 부른 직후에는 add_subject 로 계층을 만들고, "
+            "모든 생성이 끝나면 `review_curriculum` 으로 구조 품질을 검증하세요."
+        ),
         "schema": {
             "type": "object",
             "properties": {
                 "topic": {"type": "string", "description": "주제(토픽) 이름 (CLI, Git 등)"},
-                "name": {"type": "string", "description": "커리큘럼 이름 (예: 'CLI 완전 초보자 코스')"},
+                "name": {"type": "string", "description": "커리큘럼 이름 (예: 'FastAPI 기초')"},
                 "description": {"type": "string", "description": "커리큘럼 설명", "default": ""},
             },
             "required": ["topic", "name"],
         },
         "handler": _create_curriculum,
+    },
+    {
+        "name": "review_curriculum",
+        "description": (
+            "커리큘럼의 구조 품질을 분석해 리포트를 반환합니다.\n\n"
+            "**커리큘럼을 새로 만들거나 크게 수정한 직후 반드시 호출하세요.** "
+            "이 도구는 다음을 감지합니다:\n"
+            "- flat 구조 (parent_id 를 안 썼는지)\n"
+            "- 노트/실습 밀도 부족 (leaf subject 당 평균 2개 미만)\n"
+            "- 난이도/check_type 편향 (전부 ai_check, 전부 difficulty=2 등)\n"
+            "- 노트나 실습이 비어있는 subject\n\n"
+            "반환값의 `warnings` 배열이 비어있지 않거나 'Looks good' 하나만 있는 게 "
+            "아니면 지적된 부분을 보강한 뒤 다시 호출해서 재검토하세요. 'Looks good' "
+            "이 나올 때까지 반복."
+        ),
+        "schema": {
+            "type": "object",
+            "properties": {
+                "curriculum_id": {"type": "integer", "description": "검토할 커리큘럼 ID"},
+            },
+            "required": ["curriculum_id"],
+        },
+        "handler": _review_curriculum,
     },
     {
         "name": "create_topic",
