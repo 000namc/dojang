@@ -8,6 +8,7 @@ import TerminalPanel from "../components/TerminalPanel";
 
 interface SketchProps {
   className?: string;
+  isActive?: boolean;
 }
 
 function deriveTitle(content: string, fallback: string): string {
@@ -16,9 +17,12 @@ function deriveTitle(content: string, fallback: string): string {
   return firstLine.replace(/^#+\s*/, "").trim().slice(0, 60) || fallback || "Untitled";
 }
 
-export default function Sketch({ className }: SketchProps) {
+export default function Sketch({ className, isActive = true }: SketchProps) {
   const { list, current, loadList, open, create, updateContent, remove, flush } = useSketches();
   const [creating, setCreating] = useState(false);
+  // TerminalPanel 이 실제로 claude WebSocket 을 열어서 세션이 돌고 있는지. sketch
+  // 전환 시 "세션 종료할까요?" 확인 다이얼로그 노출 조건으로 쓴다.
+  const [terminalActive, setTerminalActive] = useState(false);
 
   useEffect(() => {
     loadList();
@@ -38,17 +42,28 @@ export default function Sketch({ className }: SketchProps) {
     };
   }, []);
 
-  // 현재 sketch 가 바뀌면 context chip + current_context.md 둘 다 세팅
+  // 현재 sketch 가 바뀌거나, 다른 탭 갔다 돌아왔을 때 (isActive true 로 전환)
+  // context chip + current_context.md 를 다시 세팅한다. Sketch 는 App 레벨에서
+  // 항상 마운트 상태라 current?.id 만으로는 탭 재진입을 감지 못하므로 isActive
+  // 를 deps 에 넣어야 한다.
   const setStore = useStore.setState;
   useEffect(() => {
-    if (current) {
-      const title = deriveTitle(current.content, current.title);
-      setStore({ contextRef: { type: "sketch", id: current.id, title }, contextSnippets: [] });
-      putContext(`@sketch:${title} #${current.id}\n\n${current.content}`).catch(() => {});
-    }
-  }, [current?.id]);
+    if (!isActive || !current) return;
+    const title = deriveTitle(current.content, current.title);
+    setStore({ contextRef: { type: "sketch", id: current.id, title }, contextSnippets: [] });
+    putContext(`@sketch:${title} #${current.id}\n\n${current.content}`).catch(() => {});
+  }, [isActive, current?.id]);
 
   const handleCreate = async () => {
+    // 새 sketch 로 이동해도 기존 sketch 의 tmux 세션은 백엔드에서 살아있지만
+    // 프런트는 새 sketchId 로 TerminalPanel effect 가 재실행돼 기존 xterm 이
+    // dispose 된다. 현재 세션이 돌고 있으면 먼저 확인을 받는다.
+    if (terminalActive && current) {
+      const ok = window.confirm(
+        `현재 sketch 의 Claude Code 세션을 종료하고 새 sketch 로 이동할까요?`,
+      );
+      if (!ok) return;
+    }
     setCreating(true);
     try {
       const s = await create({ content: "" });
@@ -56,6 +71,17 @@ export default function Sketch({ className }: SketchProps) {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleSelect = (id: number, title: string) => {
+    if (current?.id === id) return;
+    if (terminalActive && current) {
+      const ok = window.confirm(
+        `현재 sketch 의 Claude Code 세션을 종료하고 "${title || "Untitled"}" 로 이동할까요?`,
+      );
+      if (!ok) return;
+    }
+    open(id);
   };
 
   const handleDelete = async (id: number, title: string) => {
@@ -93,7 +119,7 @@ export default function Sketch({ className }: SketchProps) {
                     ? "bg-gray-100 dark:bg-gray-800"
                     : "hover:bg-gray-50 dark:hover:bg-gray-800/40",
                 )}
-                onClick={() => open(it.id)}
+                onClick={() => handleSelect(it.id, title)}
               >
                 <FileText size={13} className="mt-0.5 shrink-0 text-gray-400" />
                 <div className="flex-1 min-w-0">
@@ -154,6 +180,7 @@ export default function Sketch({ className }: SketchProps) {
       <TerminalPanel
         className="w-[460px] shrink-0 border-l border-gray-200 dark:border-gray-800"
         sketchId={current?.id ?? null}
+        onActiveChange={setTerminalActive}
       />
     </div>
   );

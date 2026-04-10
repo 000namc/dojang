@@ -23,9 +23,18 @@ const FALLBACK_AGENTS: AgentInfo[] = [
 export default function TerminalPanel({
   className,
   sketchId,
+  curriculumId,
+  onActiveChange,
 }: {
   className?: string;
   sketchId?: number | null;
+  /** Learn 탭의 글로벌 dock 에서만 전달된다. 이 값이 바뀌면 useEffect deps 로
+   *  인해 기존 WS/xterm 이 dispose 되고 새 curriculum 의 tmux 세션으로 재접속.
+   *  sketchId 가 있으면 그쪽이 우선되고 curriculumId 는 무시됨. */
+  curriculumId?: number | null;
+  /** 부모에게 "WS 가 열렸고 claude 세션이 살아있다" 신호를 보낸다. Sketch /
+   *  curriculum 전환 시 confirmation 다이얼로그 노출 조건으로 쓰인다. */
+  onActiveChange?: (active: boolean) => void;
 }) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -106,6 +115,7 @@ export default function TerminalPanel({
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const params = new URLSearchParams({ agent });
     if (sketchId != null) params.set("sketch_id", String(sketchId));
+    else if (curriculumId != null) params.set("curriculum_id", String(curriculumId));
     const ws = new WebSocket(
       `${protocol}//${window.location.host}/ws/terminal?${params.toString()}`,
     );
@@ -113,6 +123,7 @@ export default function TerminalPanel({
 
     ws.onopen = () => {
       setConnected(true);
+      onActiveChange?.(true);
       const dims = fitAddon.proposeDimensions();
       if (dims) {
         ws.send(JSON.stringify({ type: "resize", cols: dims.cols, rows: dims.rows }));
@@ -129,10 +140,14 @@ export default function TerminalPanel({
 
     ws.onclose = () => {
       setConnected(false);
+      onActiveChange?.(false);
       term.write("\r\n\x1b[90m[session ended]\x1b[0m\r\n");
     };
 
-    ws.onerror = () => setConnected(false);
+    ws.onerror = () => {
+      setConnected(false);
+      onActiveChange?.(false);
+    };
 
     term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
@@ -161,7 +176,7 @@ export default function TerminalPanel({
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [started, agent, sketchId]);
+  }, [started, agent, sketchId, curriculumId]);
 
   const reconnect = useCallback(() => {
     setStarted(false);

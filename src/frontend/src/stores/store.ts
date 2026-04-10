@@ -60,11 +60,16 @@ interface DojangState {
   _lastNotifyTs: number;
   _pollInterval: ReturnType<typeof setInterval> | null;
 
+  // Global dock 의 TerminalPanel 이 claude WS 를 열고 세션이 살아있는지 여부.
+  // topic / curriculum 전환 시 confirmation 다이얼로그를 띄울지 판단하는 데 쓴다.
+  globalDockActive: boolean;
+  setGlobalDockActive: (active: boolean) => void;
+
   // Actions
   loadTopics: () => Promise<void>;
-  selectTopic: (topicId: number) => Promise<void>;
+  selectTopic: (topicId: number, opts?: { skipConfirm?: boolean }) => Promise<void>;
   loadCurricula: () => Promise<void>;
-  selectCurriculum: (curriculumId: number) => Promise<void>;
+  selectCurriculum: (curriculumId: number, opts?: { skipConfirm?: boolean }) => Promise<void>;
   createCurriculum: (name: string) => Promise<void>;
   deleteCurriculum: (curriculumId: number) => Promise<void>;
   refreshCurriculumTree: () => Promise<void>;
@@ -138,6 +143,9 @@ export const useStore = create<DojangState>((set, get) => ({
   checkpoints: [],
   _lastNotifyTs: Date.now() / 1000,
   _pollInterval: null,
+  globalDockActive: false,
+
+  setGlobalDockActive: (active: boolean) => set({ globalDockActive: active }),
 
   loadTopics: async () => {
     const topics = await api.getTopics();
@@ -148,12 +156,25 @@ export const useStore = create<DojangState>((set, get) => ({
       const refreshed = topics.find((t) => t.id === cur.id);
       if (refreshed) set({ currentTopic: refreshed });
     } else if (topics.length > 0) {
-      await get().selectTopic(topics[0].id);
+      // 초기 자동 선택은 세션 교체가 아니므로 confirmation skip.
+      await get().selectTopic(topics[0].id, { skipConfirm: true });
     }
   },
 
-  selectTopic: async (topicId: number) => {
-    const { topics } = get();
+  selectTopic: async (topicId: number, opts?: { skipConfirm?: boolean }) => {
+    const { topics, currentTopic, globalDockActive } = get();
+    // Learn dock 이 살아있고 실제로 다른 topic 으로 이동하려는 거면 확인.
+    if (
+      !opts?.skipConfirm &&
+      globalDockActive &&
+      currentTopic &&
+      currentTopic.id !== topicId
+    ) {
+      const ok = window.confirm(
+        "현재 Learn 탭의 Claude Code 세션을 종료하고 다른 topic 으로 이동할까요?",
+      );
+      if (!ok) return;
+    }
     const topic = topics.find((t) => t.id === topicId) || null;
     set({
       currentTopic: topic,
@@ -185,15 +206,45 @@ export const useStore = create<DojangState>((set, get) => ({
     set({ curricula });
     if (curricula.length > 0) {
       const def = curricula.find((c) => c.is_default) || curricula[0];
-      await get().selectCurriculum(def.id);
+      // topic 전환에 딸려오는 cascading 자동 선택 — 이미 selectTopic 에서
+      // confirm 을 받았으므로 여기선 skip.
+      await get().selectCurriculum(def.id, { skipConfirm: true });
     }
   },
 
-  selectCurriculum: async (curriculumId: number) => {
-    set({ currentCurriculumId: curriculumId, selectedExerciseId: null, currentExercise: null, selectedCardId: null, currentCard: null, selectedItemType: null });
+  selectCurriculum: async (curriculumId: number, opts?: { skipConfirm?: boolean }) => {
+    const { currentCurriculumId, globalDockActive } = get();
+    // Learn dock 이 살아있고 실제로 다른 curriculum 으로 이동하려는 거면 확인.
+    if (
+      !opts?.skipConfirm &&
+      globalDockActive &&
+      currentCurriculumId &&
+      currentCurriculumId !== curriculumId
+    ) {
+      const ok = window.confirm(
+        "현재 Learn 탭의 Claude Code 세션을 종료하고 다른 커리큘럼으로 이동할까요?",
+      );
+      if (!ok) return;
+    }
+    // 새 커리큘럼으로 이동 — 이전 exercise/knowledge 선택은 stale 이므로 초기화.
+    // contextRef 도 같이 비워서 _syncContextFile 가 새 커리큘럼만 emit 하게 한다.
+    set({
+      currentCurriculumId: curriculumId,
+      selectedExerciseId: null,
+      currentExercise: null,
+      selectedCardId: null,
+      currentCard: null,
+      selectedItemType: null,
+      contextRef: null,
+      contextSnippets: [],
+    });
     const tree = await api.getCurriculumTree(curriculumId);
     set({ curriculumTree: tree });
     await get().loadCheckpoints();
+    // 선택된 커리큘럼을 현재 context 로 내려보냄 — 사용자가 아직 구체적인
+    // exercise/knowledge 를 누르지 않아도 claude 가 어떤 커리큘럼 안에 있는지
+    // 알 수 있다.
+    get()._syncContextFile();
   },
 
   createCurriculum: async (name: string) => {
@@ -201,7 +252,8 @@ export const useStore = create<DojangState>((set, get) => ({
     if (!currentTopic) return;
     const { id } = await api.createCurriculum(currentTopic.id, name);
     await get().loadCurricula();
-    await get().selectCurriculum(id);
+    // 방금 만든 커리큘럼으로 자동 이동 — 사용자가 방금 직접 만든거니 확인 skip.
+    await get().selectCurriculum(id, { skipConfirm: true });
   },
 
   deleteCurriculum: async (curriculumId: number) => {
@@ -455,14 +507,31 @@ export const useStore = create<DojangState>((set, get) => ({
   },
 
   resetContext: () => {
+    // 구체적 contextRef + 스니펫만 비운다. ambient 커리큘럼은 store 상태에
+    // 남아있으므로 _syncContextFile 이 다시 계산해서 ambient 만 있는 상태로
+    // 파일을 쓴다 (Learn 에 돌아왔을 때 @curriculum:... 이 복원됨).
     set({ contextRef: null, contextSnippets: [] });
-    api.putContext("").catch(() => {});
+    get()._syncContextFile();
   },
 
   _syncContextFile: () => {
-    const { contextRef, contextSnippets } = get();
+    const { contextRef, contextSnippets, currentCurriculumId, curricula, currentTopic } = get();
     const lines: string[] = [];
+
+    // Ambient Learn 맥락 — 커리큘럼이 선택돼 있으면 항상 포함한다. exercise 나
+    // knowledge 를 클릭하기 전에도 claude 가 "지금 학습자가 어떤 커리큘럼 안에
+    // 있는지" 알 수 있다. Sketch/Home/Guide 등 Learn 과 무관한 탭에서도 보이긴
+    // 하지만 claude 가 보조 정보로 해석하면 되는 수준.
+    if (currentCurriculumId) {
+      const cur = curricula.find((c) => c.id === currentCurriculumId);
+      if (cur) {
+        const topicPart = currentTopic ? ` (topic: ${currentTopic.name})` : "";
+        lines.push(`@curriculum:${cur.name} #${cur.id}${topicPart}`);
+      }
+    }
+
     if (contextRef) {
+      if (lines.length > 0) lines.push("");
       lines.push(`@${contextRef.type}:${contextRef.title} #${contextRef.id}`);
     }
     for (const s of contextSnippets) {

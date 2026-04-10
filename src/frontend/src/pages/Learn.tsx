@@ -14,6 +14,11 @@ export default function Learn({ className }: LearnProps) {
 
   useEffect(() => {
     startNotifyPolling();
+    // Learn 탭에 (재)진입할 때 current_context.md 를 store 상태로부터
+    // 재계산해서 쓴다. 탭 전환 시 resetContext 가 contextRef/스니펫을 비우기
+    // 때문에, 돌아왔을 때 ambient 커리큘럼 최소 한 줄이라도 claude 에게 보여야
+    // "내가 지금 어디 있는지" 를 안다.
+    useStore.getState()._syncContextFile();
     return () => stopNotifyPolling();
   }, []);
 
