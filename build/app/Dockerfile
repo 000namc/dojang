@@ -9,14 +9,26 @@ RUN npm run build
 
 FROM python:3.13-slim
 
-# Node.js (LTS) + Claude Code CLI + docker client + tmux + uv.
+# Node.js (LTS) + Claude Code CLI + docker client + tmux + uv + gh.
 # tmux 는 sketch 터미널 세션을 WebSocket 재연결 사이에 살아있게 유지해서
 # 탭을 떠났다 돌아와도 스크롤백과 진행중 출력이 보존되도록 한다 (terminal.py 참고).
+# gh 는 "코드 해부 / 학습 플랜" 매직프롬프트가 사용자 GitHub repo 를 clone 하기
+# 위해 필요. 토큰은 사용자가 첫 실행 후 `docker exec -it dojang-app gh auth login`
+# 한 번 돌려서 받아두고, /root/.config/gh 가 named volume 으로 영속화된다
+# (docker-compose.yml 의 dojang-gh-config 참고). claude /login 패턴과 동일.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates gnupg docker.io tmux && \
+    apt-get install -y --no-install-recommends curl ca-certificates gnupg docker.io tmux git && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     npm install -g @anthropic-ai/claude-code && \
+    install -dm 0755 /etc/apt/keyrings && \
+    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+        | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
+    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+        > /etc/apt/sources.list.d/github-cli.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends gh && \
     rm -rf /var/lib/apt/lists/* && \
     pip install --no-cache-dir uv
 

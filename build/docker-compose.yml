@@ -23,6 +23,12 @@ services:
       # (/app/claude-config/claude.json → /root/.claude.json symlink, Dockerfile 참고).
       - ${HOME}/.claude:/root/.claude
       - dojang-claude-config:/app/claude-config
+      # gh CLI 자격증명 영속화 — `gh auth login` 으로 받은 OAuth 토큰이
+      # 컨테이너 재시작 / 재빌드 후에도 유지되도록 named volume 사용.
+      # 호스트 ~/.config/gh 를 직접 마운트하지 않는 이유는 (a) macOS 사용자가
+      # 호스트에서 gh 를 안 쓰는 경우가 많고, (b) 컨테이너의 OAuth flow 와
+      # 호스트의 OAuth flow 가 충돌할 수 있어서. claude-config 와 같은 패턴.
+      - dojang-gh-config:/root/.config/gh
     depends_on:
       dojang-sql:
         condition: service_healthy
@@ -53,3 +59,4 @@ services:
 
 volumes:
   dojang-claude-config:
+  dojang-gh-config:
