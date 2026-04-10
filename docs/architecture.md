@@ -36,17 +36,61 @@ Dojang은 OpenAI, Anthropic SDK 어느 것도 import하지 않는다. **모든 A
 
 ## 핵심 데이터 흐름
 
-### Sketch 모드 (per-sketch claude 세션)
-1. 사용자가 Home에서 입력 → 새 sketch 생성 → Sketch 탭으로 이동
-2. Sketch 탭이 열리면 우측 터미널이 `WS /ws/terminal?sketch_id=N` 으로 연결
-3. 백엔드가 sketch의 `claude_session_id` 조회. 없으면 `claude` 새로 spawn, 있으면 `claude --resume <id>`
-4. 새 세션이면 백그라운드 워커가 `~/.claude/projects/<hash>/` 디렉토리를 폴링해서 새로 생긴 .jsonl 파일의 UUID를 찾아 DB에 저장 → 다음 번 열기에서 resume 가능
-5. 사용자가 터미널에서 Claude와 대화. 좌측 에디터의 마크다운 노트는 별도로 SQLite에 저장.
+### 터미널 세션 — PTY + tmux wrapping
 
-### Learn 모드 (글로벌 claude 세션)
-1. Learn 탭의 우측 터미널은 `sketch_id` 없이 `WS /ws/terminal` 연결
-2. 한 번 spawn된 claude 세션이 탭 전환에도 살아있음 (`App.tsx`의 글로벌 `<TerminalPanel>`)
-3. Claude가 학습자 컨텍스트(`data/current_context.md`) 와 MCP 도구로 학습 카드를 생성/수정
+모든 claude 세션은 `<TerminalPanel>` → `/ws/terminal` WebSocket → 백엔드의 PTY 로 이어진다. 그런데 **탭 전환이나 WS 재연결 사이에 세션이 살아남게 하려면** 백엔드·프론트엔드 양쪽에 지속성 메커니즘이 필요하다.
+
+**(1) 백엔드 — tmux 래핑** (`routers/terminal.py`)
+
+WS 쿼리 파라미터에 따라 다르게 spawn:
+
+| 상황 | 쿼리 | tmux 세션 이름 |
+|------|------|----------------|
+| Sketch 탭의 per-sketch 터미널 | `?sketch_id=N` | `dojang-sketch-N` |
+| Learn/Subjects/Explore 탭의 글로벌 dock | `?curriculum_id=N` | `dojang-curriculum-N` |
+| 그 외 (sketch 도 curriculum 도 없는 경우) | — | tmux 없이 일반 claude 프로세스 |
+
+첫 연결은 `tmux new-session` 으로 claude 를 감싸 띄우고, 같은 id 로 다시 연결되면 `tmux attach-session -d` 로 기존 세션에 붙는다. WS 가 끊기면 `tmux detach-client` 만 호출 — claude 프로세스는 tmux 서버 안에서 계속 돈다. 격리 소켓 `-L dojang` 을 써서 호스트 tmux 와 섞이지 않음. tmux 설정은 terminal.py 가 `data/tmux.conf` 에 자동 생성.
+
+이게 의미하는 것:
+- Sketch #2 에서 Claude 와 대화 → Sketch #1 로 이동 → Sketch #2 로 복귀 → **Sketch #2 의 tmux 세션에 재접속해서 이전 대화가 그대로**
+- Learn 탭에서 FastAPI 커리큘럼으로 대화 → CLI 로 전환 → FastAPI 로 복귀 → FastAPI 용 tmux 세션에 재접속 → 이전 대화 그대로
+
+`sketch_id` 가 우선되고 curriculum 은 보조 — Sketch 탭은 curriculum 무관.
+
+**(2) 프론트엔드 — Always-mount 패턴** (`App.tsx`)
+
+백엔드 tmux 가 세션을 살려둬도 프론트엔드 `<Sketch>` 나 글로벌 `<TerminalPanel>` 이 언마운트되면 xterm.js + WebSocket 이 dispose 돼서 사용자 눈에는 "세션이 꺼진" 것처럼 보인다. 그래서 두 컴포넌트는 **항상 DOM 에 마운트된 상태로 유지**하고 `display: none` 으로만 숨긴다 (`App.tsx` 의 `cn(..., currentView !== "sketch" && "hidden")` 패턴). 나머지 탭 (Home, Learn, Subjects, Explore, Guide) 는 조건부 렌더링 유지.
+
+Sketch 는 언마운트 안 되므로 탭 재진입 시 `useEffect` 가 다시 안 돈다 → `isActive` prop (App 이 내려주는 `currentView === "sketch"`) 을 deps 에 넣어 재활성화 시 context 를 다시 쓰게 한다.
+
+**(3) 스코프 전환 confirmation**
+
+같은 탭 안에서 스코프 (`sketchId` / `curriculumId`) 가 바뀌면 `TerminalPanel` 의 effect 가 재실행돼서 현재 xterm + WS 가 dispose 된다 (이전 tmux 세션은 백엔드에 그대로 살아있지만, 프론트는 새 스코프로 재연결). 사용자 입장에서는 "현재 대화를 떠나는" 것이므로 확인이 필요하다:
+
+- Sketch 탭: `TerminalPanel` 이 `onActiveChange(active)` 콜백으로 "claude WS 가 열려있다" 는 신호를 내보내고, Sketch 가 이걸 `terminalActive` state 로 받아서 다른 sketch 클릭/생성 시 `window.confirm`.
+- Learn 탭: 사이드바의 topic/curriculum 변경은 store 의 `selectTopic` / `selectCurriculum` 을 거치는데, 이 액션들이 `globalDockActive` 를 체크하고 confirm. 초기 자동 선택이나 `createCurriculum` 직후 자동 이동처럼 confirm 이 불필요한 내부 호출은 `{ skipConfirm: true }` 옵션으로 bypass.
+
+**(4) Sketch 의 `--resume` 추적**
+
+`sketches.claude_session_id` 컬럼에 각 sketch 가 마지막으로 사용한 Claude Code 세션 uuid 를 저장해서 `claude --resume <uuid>` 로 복구한다. WS 연결 직후 백그라운드 워커 (`_detect_new_session`) 가 `~/.claude/projects/<encoded-cwd>/` 디렉토리를 폴링해서 새 `.jsonl` 파일을 잡아 DB 에 저장 — tmux 서버가 죽는 상황 (컨테이너 재시작) 의 안전망이다. Curriculum 스코프는 현재 resume 추적이 없어서 컨테이너가 살아있는 동안만 tmux 로 지속된다 (향후 개선 여지).
+
+### Learner context — `data/current_context.md`
+
+프론트엔드가 사용자의 현재 상태를 이 파일에 쓰면 Claude Code 세션이 `/app/CLAUDE.md` (자동 생성, 세션 시작 시 주입) 의 지시에 따라 읽어서 맥락을 파악한다. 포맷:
+
+```
+@curriculum:<이름> #<id> (topic: <토픽명>)
+@sketch:<제목> #<id>
+@exercise:<제목> #<id>
+@knowledge:<제목> #<id>
+
+> 드래그 선택한 인용 텍스트
+```
+
+여러 줄이 같이 있을 수 있다 — 예: `@curriculum:FastAPI 기초` 와 `@exercise:Depends 드릴 #105` 가 함께 있으면 "이 커리큘럼 안의 이 문제를 보고 있음". **Learn 탭에서 topic/curriculum 만 선택해도 `@curriculum:` ambient 라인이 항상 포함**되어 구체적인 exercise 를 클릭하지 않아도 Claude 가 "지금 어떤 커리큘럼 안에 있는지" 를 안다.
+
+쓰는 지점은 store 의 `_syncContextFile`. `selectTopic` / `selectCurriculum` / `selectExercise` / `selectCard` + Sketch 탭의 current sketch 변경 시 호출. 탭 전환 시 `resetContext` 는 구체적 ref 만 비우고 ambient 커리큘럼은 살려서 재계산한다.
 
 ### Curriculum / Knowledge 변경
 1. Claude Code가 MCP 도구 호출 (`add_subject`, `create_exercise`, `save_knowledge`, `create_curriculum` 등)
