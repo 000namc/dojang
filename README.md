@@ -35,7 +35,7 @@ cd build && docker compose up -d
 > ```
 > 호스트의 `~/.claude/` 디렉토리가 컨테이너에 마운트되어 OAuth 토큰 (`.credentials.json`) 이 그대로 공유됩니다. Linux 호스트는 보통 호스트 claude 의 자격증명이 그대로 인계되어 별도 단계 없이 동작하고, macOS 는 자격증명이 keychain 에 있어서 첫 실행 시 한 번 컨테이너 안에서 OAuth 가 필요합니다. 한 번 로그인 후엔 컨테이너 재시작에도 영속됩니다.
 >
-> 컨테이너의 `~/.claude.json` (config 파일) 은 호스트와 분리되어 `dojang-data` 볼륨 안에 자체 영속됩니다 — 호스트 macOS 의 atomic rewrite + OS-specific install 메타데이터가 컨테이너에서 race / mismatch 를 일으키기 때문.
+> 컨테이너의 `~/.claude.json` (config 파일) 은 호스트와 분리되어 `dojang-claude-config` named volume 안에 자체 영속됩니다 — 호스트 macOS 의 atomic rewrite + OS-specific install 메타데이터가 컨테이너에서 race / mismatch 를 일으키기 때문. 학습 DB (`data/dojang.db`) 는 별개로, 호스트 `data/` 디렉토리를 bind mount 해서 Finder 에서 직접 보입니다.
 
 ### 컨트리뷰터: 핫리로드
 
@@ -102,11 +102,13 @@ Dojang은 사용자 머신 안에서만 동작합니다. 어떤 데이터도 외
 
 로컬에서 새 토픽을 만들거나 채팅으로 커리큘럼을 추가해도 그 변경은 `data/dojang.db` 에만 들어갑니다. `build/{topic}/*.json` 시드 파일은 절대 런타임에 기록되지 않습니다. 즉 자기 학습 데이터가 레포에 섞일 일이 없고, PR을 보낼 때 `git diff` 가 깨끗합니다.
 
-### Docker volume
+### 데이터 영속성
 
-`data/` 는 named volume `dojang-data` 로 마운트되어 컨테이너 재시작에도 살아남습니다. 컨테이너 + 데이터까지 완전히 삭제하려면:
+학습 데이터 (`data/dojang.db` 등) 는 호스트 `data/` 디렉토리를 컨테이너 `/app/data` 에 bind mount 해서 영속됩니다 — Finder / git status / Time Machine 에서 직접 보이고, 백업은 디렉토리 복사만으로 끝납니다. `docker compose down -v` 를 해도 학습 이력은 안전하게 남습니다.
+
+claude CLI config 만 별도로 `dojang-claude-config` named volume 에 있어서, 완전히 새로 시작하려면 그 볼륨까지 지우면 됩니다:
 ```bash
-cd build && docker compose down -v
+cd build && docker compose down -v   # claude-config 만 삭제됨. data/ 는 호스트에 그대로 남음
 ```
 
 ## Contributing

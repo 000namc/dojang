@@ -77,14 +77,6 @@ Claude Code 세션이 호출할 수 있는 MCP 도구 목록. `src/backend/tools
 - `topic` (string)
 - `query` (string) — 검색어
 
-## UI 알림
-
-### notify_ui
-도구가 데이터를 변경한 직후 호출하면 프론트엔드 폴링이 즉시 감지해서 UI를 갱신한다.
-- `event` (string, required) — 자유 문자열 (예: `curriculum_updated`, `knowledge_updated`)
-
-`data/.notify` 파일에 `{event, ts}` 형태의 JSON을 기록하며, 프론트엔드는 `/api/notify?since=<ts>` 폴링으로 변경을 감지한다.
-
 ## 호출 흐름 예시
 
 학습자가 sketch에서 "SQL의 GROUP BY 자세히 배우고 싶어"라고 말했을 때 Claude Code가 할 수 있는 흐름:
@@ -93,6 +85,5 @@ Claude Code 세션이 호출할 수 있는 MCP 도구 목록. `src/backend/tools
 2. (이미 GROUP BY subject가 있으면) `save_knowledge(...)` 로 보충 노트 추가
 3. (없으면) `add_subject(curriculum_id=..., name="GROUP BY 심화")` 로 새 과목
 4. `create_exercise(subject_id=..., title="GROUP BY + HAVING", ...)` 로 실습 추가
-5. `notify_ui(event="curriculum_updated")` 로 프론트 갱신 트리거
 
-이 모든 호출이 Claude Code 세션 안에서 일어나므로 외부 API 비용/지연 없이 즉시 반영된다.
+UI 갱신은 각 mutation 도구가 내부적으로 `data/.notify` 에 기록하므로 자동으로 반영된다 (프론트엔드가 `/api/notify?since=<ts>` 로 폴링). 이 모든 호출이 Claude Code 세션 안에서 일어나므로 외부 API 비용/지연 없이 즉시 반영된다.

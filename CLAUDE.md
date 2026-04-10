@@ -14,7 +14,7 @@
 ## 데이터 정책
 
 - **샘플 데이터**: `build/{cli,git,docker,sql}/curriculum.json` + `knowledge.json`. 레포에 커밋. 첫 부팅 시 `seed_if_empty()`가 빈 DB 감지 → 자동 시드.
-- **개인 데이터**: `data/dojang.db`. **gitignored**. Docker는 named volume `dojang-data`로 영속화.
+- **개인 데이터**: `data/dojang.db` + `data/current_context.md` 등. **gitignored**. 호스트 `data/` 를 컨테이너 `/app/data` 에 bind mount — Finder/git/Time Machine 에서 직접 보이고, 백업은 디렉토리 복사로 끝남.
 - **Claude Code 세션**: `~/.claude/projects/<encoded-cwd>/<uuid>.jsonl` — 사용자 home 디렉토리에 영속.
 - **API 키**: Dojang은 외부 AI API를 호출하지 않으므로 키가 필요 없음. `claude` CLI 가 자체 인증 처리.
 
@@ -24,7 +24,7 @@
 cd build && docker compose up -d    # http://localhost:8010
 ```
 
-`src/backend/` 가 컨테이너에 bind mount + `uvicorn --reload` 라 호스트에서 코드 바꾸면 자동 반영. `${HOME}/.claude` 디렉토리만 컨테이너에 마운트되어 자격증명 (`.credentials.json`) / 세션 jsonl 이 호스트와 공유됨. `~/.claude.json` (config 파일) 은 호스트와 분리해서 dojang-data 볼륨에 자체 영속 — 호스트 macOS 의 atomic-rewrite + installMethod=native 가 컨테이너에서 race / mismatch 를 일으키기 때문. macOS 사용자는 첫 실행 시 `docker exec -it dojang-app claude /login` 한 번 필요.
+`src/backend/` 가 컨테이너에 bind mount + `uvicorn --reload` 라 호스트에서 코드 바꾸면 자동 반영. 호스트 `data/` 는 `/app/data` 에 bind mount — DB 와 `current_context.md` 를 Finder 에서 직접 볼 수 있다. `${HOME}/.claude` 디렉토리도 컨테이너에 마운트되어 자격증명 (`.credentials.json`) / 세션 jsonl 이 호스트와 공유됨. 단 `~/.claude.json` (config 파일) 은 호스트와 분리해서 `dojang-claude-config` named volume 에 자체 영속 — 호스트 macOS 의 atomic-rewrite + installMethod=native 가 컨테이너에서 race / mismatch 를 일으키기 때문. 컨테이너 안에서는 `/root/.claude.json → /app/claude-config/claude.json` symlink 로 리다이렉트. macOS 사용자는 첫 실행 시 `docker exec -it dojang-app claude /login` 한 번 필요.
 
 프론트엔드를 자주 만지면 별도로 vite dev server:
 ```bash

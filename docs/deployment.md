@@ -13,12 +13,14 @@ cd build && docker compose build app && docker compose up -d app
 
 ## 데이터 백업
 
-`data/dojang.db` 만 백업하면 학습 이력 / sketch / 시도가 모두 보존된다.
+호스트 `data/dojang.db` 만 백업하면 학습 이력 / sketch / 시도가 모두 보존된다. 컨테이너의 `/app/data` 는 호스트 `data/` 를 bind mount 한 것이므로 `docker cp` 가 필요 없다.
 
 ```bash
 # 일일 cron 예시
-docker cp dojang-app:/app/data/dojang.db ~/backups/dojang-$(date +%Y%m%d).db
+cp ~/dojang/data/dojang.db ~/backups/dojang-$(date +%Y%m%d).db
 ```
+
+claude CLI 의 config 파일 (`~/.claude.json` → `dojang-claude-config` volume) 은 백업 대상이 아님 — `claude /login` 으로 언제든 재발급 가능.
 
 ## 모니터링
 

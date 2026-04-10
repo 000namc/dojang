@@ -293,11 +293,6 @@ def _execute_code(args: dict) -> dict:
         return {"output": stdout}
 
 
-def _notify_ui(args: dict) -> dict:
-    _write_notify_file(args["event"])
-    return {"status": "notified", "event": args["event"]}
-
-
 def _save_knowledge(args: dict) -> dict:
     db = get_db()
     try:
@@ -528,22 +523,6 @@ TOOL_REGISTRY: list[dict] = [
             "required": ["title", "content"],
         },
         "handler": _save_knowledge,
-    },
-    {
-        "name": "notify_ui",
-        "description": "웹 UI에 변경 알림을 보냅니다. 커리큘럼이나 연습문제를 변경한 후 호출하세요.",
-        "schema": {
-            "type": "object",
-            "properties": {
-                "event": {
-                    "type": "string",
-                    "enum": ["curriculum_updated", "exercise_created", "knowledge_updated"],
-                    "description": "이벤트 타입",
-                },
-            },
-            "required": ["event"],
-        },
-        "handler": _notify_ui,
     },
     {
         "name": "create_curriculum",

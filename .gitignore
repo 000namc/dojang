@@ -4,6 +4,7 @@ __pycache__/
 .env
 data/*
 !data/.gitkeep
+backups/
 node_modules/
 **/dist/
 static/

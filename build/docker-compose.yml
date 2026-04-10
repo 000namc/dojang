@@ -8,16 +8,21 @@ services:
       - "8010:8010"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - dojang-data:/app/data
+      # 학습자 데이터 (dojang.db, current_context.md 등) 는 호스트 data/ 에 직접
+      # 보이게 bind mount — Finder/git status/Time Machine 에서 즉시 확인 가능하고
+      # 백업도 디렉토리 복사로 끝남. 도커 볼륨에 숨겨두면 실수로 down -v 한 방에
+      # 학습 이력이 전부 사라진다.
+      - ../data:/app/data
       # 백엔드 코드 bind mount → uvicorn --reload 로 핫리로드
       - ../src/backend:/app/src/backend
       # 호스트의 claude 세션 + 자격증명 공유 (~/.claude/.credentials.json 등).
       # 단 ~/.claude.json (config 파일) 은 마운트하지 않음 — 호스트 macOS 의
       # installMethod=native + atomic-rewrite 가 컨테이너에서 corrupt 로 보이는
       # race condition 을 일으키고, OS-specific 설정이 mismatch 됨. 컨테이너는
-      # 자체 .claude.json 을 dojang-data 볼륨 (/app/data/claude.json → symlink) 에
-      # 영속화한다.
+      # 자체 .claude.json 을 아래 dojang-claude-config 볼륨에 영속화한다
+      # (/app/claude-config/claude.json → /root/.claude.json symlink, Dockerfile 참고).
       - ${HOME}/.claude:/root/.claude
+      - dojang-claude-config:/app/claude-config
     depends_on:
       dojang-sql:
         condition: service_healthy
@@ -47,4 +52,4 @@ services:
       retries: 10
 
 volumes:
-  dojang-data:
+  dojang-claude-config:
