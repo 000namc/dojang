@@ -17,15 +17,33 @@ cd build && docker compose up -d
 
 `src/backend/` 는 컨테이너에 bind mount + `uvicorn --reload` 라서 호스트에서 백엔드 코드를 편집하면 자동 반영됩니다. 별도 단계 없음.
 
-프론트엔드를 자주 만지는 경우만 vite dev server 가 따로 필요:
+프론트엔드는 두 가지 워크플로우 중 하나:
+
+**(a) Vite dev server** — 자주 만질 때
 ```bash
 cd src/frontend && npm install && npm run dev   # http://localhost:5173
 ```
+`vite.config.ts` 가 `/api`, `/health`, `/ws` 를 8010 으로 프록시. 핫리로드 즉시 반영.
+
+**(b) 로컬 빌드 + docker cp** — :8010 페이지를 그대로 쓰면서 빠르게 한 번만 반영하고 싶을 때
+```bash
+cd src/frontend && npm run build
+docker cp dist/. dojang-app:/app/static/
+```
+컨테이너 안의 `/app/static` 은 이미지에서 COPY 된 것이라 bind mount 가 아니지만 `docker cp` 로 덮어쓰면 즉시 반영됨. 단 컨테이너를 재생성하면 (`compose down/up`, `--build`) 이미지의 원본 static 으로 롤백되므로 영구 반영하려면 `docker compose build app && docker compose up -d app`.
 
 claude 자격증명은 컨테이너의 `/root/.claude` 가 호스트의 `${HOME}/.claude` 와 마운트되어 영속됩니다. macOS 는 keychain 자격증명이 마운트로 따라오지 않아서 첫 실행 시 한 번 컨테이너 안에서 로그인:
 ```bash
 docker exec -it dojang-app claude /login
 ```
+
+## 자동 생성되는 파일 두 가지
+
+`src/backend/routers/terminal.py` 가 컨테이너 안에서 두 파일을 자동으로 만든다:
+
+**`/app/CLAUDE.md`** — 컨테이너 안에서 도는 모든 Claude Code 세션이 시스템 프롬프트로 읽는다. `_CLAUDE_MD_CONTENT` 상수를 편집하면 새 세션부터 적용. **주의**: 기존 tmux 세션 (sketch / curriculum 둘 다) 안의 claude 는 spawn 시점에 이 파일을 한 번 읽고 자기 컨텍스트로 갖고 있으므로, 템플릿을 바꾼 뒤 효과를 보려면 **새 sketch 를 만들거나 (또는 `tmux -L dojang kill-session -t dojang-sketch-N`) tmux 세션을 죽여서 spawn 시점을 한번 더 발생시켜야** 한다.
+
+**`/app/data/tmux.conf`** — sketch / curriculum 터미널이 tmux 로 wrap 될 때 쓰는 설정. `_TMUX_CONF` 상수에서 자동 생성. 키바인딩 전부 unbind 해서 투명 래퍼로 동작.
 
 ## 프로젝트 구조
 
@@ -150,7 +168,9 @@ sketches       (id, title, content, claude_session_id, created_at, updated_at)
 | GET | `/api/context` | `data/current_context.md` 읽기 |
 | PUT | `/api/context` | 학습 컨텍스트 업데이트 |
 | GET | `/api/agents` | 사용 가능한 코딩 에이전트 (claude/opencode) 목록 |
-| WS | `/ws/terminal?agent=claude&sketch_id=N` | Claude Code PTY 세션 |
+| WS | `/ws/terminal?agent=claude&sketch_id=N` | Sketch 전용 PTY 세션 (tmux `dojang-sketch-N` 으로 wrap) |
+| WS | `/ws/terminal?agent=claude&curriculum_id=N` | Learn dock 의 per-curriculum PTY 세션 (tmux `dojang-curriculum-N` 으로 wrap) |
+| WS | `/ws/terminal?agent=claude` | 둘 다 없으면 tmux 없이 일반 claude 프로세스 |
 
 ## 외부 AI API 절대 import 금지
 

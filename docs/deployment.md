@@ -7,9 +7,19 @@ Dojang 은 자기 머신에서 돌리는 개인 학습 도구다. 설치는 [REA
 ```bash
 cd ~/dojang && git pull
 # 백엔드 코드는 bind mount + --reload 라 git pull 만으로 자동 반영됨.
-# Dockerfile / pyproject.toml / 프론트엔드 빌드 산출물이 바뀐 경우만 재빌드 필요:
+# Dockerfile / pyproject.toml / 프론트엔드 소스가 바뀐 경우만 재빌드 필요:
 cd build && docker compose build app && docker compose up -d app
 ```
+
+### macOS 재빌드 시 함정
+
+Docker Desktop 의 credentials helper (`docker-credential-desktop`) 가 기본 PATH 에 없어서, 새 셸에서 `docker compose build` 가 base image metadata 를 못 가져와 실패할 수 있다 (`error getting credentials - err: exec: "docker-credential-desktop": executable file not found`). 해결:
+
+```bash
+PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH" docker compose build app
+```
+
+또는 `~/.zshrc` / `~/.bashrc` 에 `export PATH="/Applications/Docker.app/Contents/Resources/bin:$PATH"` 를 한 번 박아둠.
 
 ## 데이터 백업
 

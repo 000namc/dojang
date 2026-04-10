@@ -9,6 +9,7 @@
 - `build/` — Docker 파일 + 도메인별 시드 데이터 (`{topic}/curriculum.json`, `knowledge.json`). 커밋 대상
 - `docs/` — 상세 문서
 - `data/` — 런타임 SQLite DB / sketch / 학습 이력. **개인 데이터, gitignored**
+- `backups/` — 볼륨 마이그레이션 등으로 떠둔 tarball 보관소. **gitignored**
 - `imgs/` — README용 스크린샷
 
 ## 데이터 정책
@@ -41,17 +42,20 @@ cd src/frontend && npm run dev      # http://localhost:5173
 
 ## 학습 맥락
 
-`data/current_context.md` 파일에 학습자가 현재 보고 있는 항목이 자동으로 기록된다. 작업을 시작하기 전에 이 파일을 읽으면 학습자의 현재 상황을 파악할 수 있다.
+`data/current_context.md` 파일에 학습자가 현재 보고 있는 항목이 자동으로 기록된다. 작업을 시작하기 전에 이 파일을 읽으면 학습자의 현재 상황을 파악할 수 있다. 여러 라인이 동시에 있을 수 있다 — 예를 들어 `@curriculum:` 과 `@exercise:` 가 같이 있으면 "이 커리큘럼 안의 이 문제를 보고 있다" 는 뜻.
 
 형식 예시:
 ```
+@curriculum:FastAPI 기초 #6 (topic: FastAPI)
 @exercise:SELECT로 데이터 조회하기 #5
 
 > users 테이블에서 나이가 30 이상인 행을 조회하세요
 ```
-- `@exercise:제목 #id` / `@knowledge:제목 #id` — 학습자가 선택한 항목
+- `@curriculum:제목 #id (topic: 토픽명)` — Learn 탭에서 선택한 커리큘럼. 구체 항목 클릭 전에도 항상 포함됨 (ambient). 트리 전체는 `get_curriculum` MCP 도구로 가져올 수 있다.
+- `@sketch:제목 #id` + 본문 — 학습자가 열어둔 sketch 노트
+- `@exercise:제목 #id` / `@knowledge:제목 #id` — 학습자가 클릭한 연습문제 / 지식 카드
 - `> 인용문` — 학습자가 드래그해서 추가한 텍스트 (관심 포인트)
-- MCP 도구 `get_exercise`, `get_knowledge`로 상세 내용을 가져올 수 있다
+- 상세 내용은 `get_exercise`, `get_knowledge` MCP 도구로 가져올 수 있다
 
 ## 규칙
 
