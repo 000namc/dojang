@@ -36,7 +36,7 @@ export default function Practice() {
       </div>
 
       {/* Right: Coding agent terminal (Claude Code / OpenCode) */}
-      <TerminalPanel className="w-[420px] shrink-0 border-l border-gray-200 dark:border-gray-800" />
+      <TerminalPanel className="w-[640px] shrink-0 border-l border-gray-200 dark:border-gray-800" />
 
       {/* Theme toggle */}
       <div className="fixed top-2 right-2 z-50">

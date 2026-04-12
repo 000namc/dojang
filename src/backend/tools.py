@@ -296,6 +296,8 @@ def _execute_code(args: dict) -> dict:
 def _save_knowledge(args: dict) -> dict:
     db = get_db()
     try:
+        knowledge_id = args.get("id")
+
         topic_id = None
         topic_name = args.get("topic")
         if topic_name:
@@ -304,13 +306,46 @@ def _save_knowledge(args: dict) -> dict:
                 topic_id = row["id"]
 
         subject_id = args.get("subject_id")
-        cursor = db.execute(
-            "INSERT INTO knowledge (topic_id, subject_id, title, content, tags) VALUES (?, ?, ?, ?, ?)",
-            (topic_id, subject_id, args["title"], args.get("content", ""), args.get("tags", "")),
-        )
-        db.commit()
-        _write_notify_file("knowledge_updated")
-        return {"id": cursor.lastrowid, "title": args["title"], "status": "saved"}
+
+        if knowledge_id:
+            # 기존 카드 업데이트
+            existing = db.execute("SELECT id FROM knowledge WHERE id = ?", (knowledge_id,)).fetchone()
+            if not existing:
+                return {"error": f"Knowledge card #{knowledge_id} not found"}
+            sets = []
+            params: list = []
+            if "title" in args:
+                sets.append("title = ?")
+                params.append(args["title"])
+            if "content" in args:
+                sets.append("content = ?")
+                params.append(args["content"])
+            if "tags" in args:
+                sets.append("tags = ?")
+                params.append(args["tags"])
+            if topic_id is not None:
+                sets.append("topic_id = ?")
+                params.append(topic_id)
+            if subject_id is not None:
+                sets.append("subject_id = ?")
+                params.append(subject_id)
+            if not sets:
+                return {"id": knowledge_id, "status": "no changes"}
+            sets.append("updated_at = CURRENT_TIMESTAMP")
+            params.append(knowledge_id)
+            db.execute(f"UPDATE knowledge SET {', '.join(sets)} WHERE id = ?", params)
+            db.commit()
+            _write_notify_file("knowledge_updated")
+            return {"id": knowledge_id, "title": args.get("title", ""), "status": "updated"}
+        else:
+            # 새 카드 생성
+            cursor = db.execute(
+                "INSERT INTO knowledge (topic_id, subject_id, title, content, tags) VALUES (?, ?, ?, ?, ?)",
+                (topic_id, subject_id, args["title"], args.get("content", ""), args.get("tags", "")),
+            )
+            db.commit()
+            _write_notify_file("knowledge_updated")
+            return {"id": cursor.lastrowid, "title": args["title"], "status": "saved"}
     finally:
         db.close()
 
@@ -719,6 +754,10 @@ TOOL_REGISTRY: list[dict] = [
         "schema": {
             "type": "object",
             "properties": {
+                "id": {
+                    "type": "integer",
+                    "description": "기존 카드를 수정할 때 카드 ID를 전달하세요. 생략하면 새 카드를 생성합니다.",
+                },
                 "topic": {"type": "string", "description": "관련 주제(토픽) 이름"},
                 "subject_id": {
                     "type": "integer",

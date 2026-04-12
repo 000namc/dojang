@@ -60,7 +60,7 @@ export default function App() {
           dojang-curriculum-<id> tmux 세션으로 전환되도록 한다. */}
       <div
         className={cn(
-          "w-[420px] shrink-0 border-l border-gray-200 dark:border-gray-800",
+          "w-[640px] shrink-0 border-l border-gray-200 dark:border-gray-800",
           !showTerminalDock && "hidden",
         )}
       >

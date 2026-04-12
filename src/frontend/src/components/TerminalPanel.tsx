@@ -72,7 +72,7 @@ export default function TerminalPanel({
 
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 13,
+      fontSize: 12,
       fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
       theme: {
         background: "#1a1b26",
@@ -341,7 +341,7 @@ export default function TerminalPanel({
           </button>
         </div>
       ) : (
-        <div ref={terminalRef} className="flex-1 min-h-0 p-1" />
+        <div ref={terminalRef} className="flex-1 min-h-0" />
       )}
     </div>
   );

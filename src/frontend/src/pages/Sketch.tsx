@@ -178,7 +178,7 @@ export default function Sketch({ className, isActive = true }: SketchProps) {
 
       {/* Right: per-sketch Claude Code terminal (full height) */}
       <TerminalPanel
-        className="w-[460px] shrink-0 border-l border-gray-200 dark:border-gray-800"
+        className="w-[640px] shrink-0 border-l border-gray-200 dark:border-gray-800"
         sketchId={current?.id ?? null}
         onActiveChange={setTerminalActive}
       />
