@@ -6,6 +6,7 @@ import "@xterm/xterm/css/xterm.css";
 import { cn } from "../lib/cn";
 import { Play, RotateCcw, ChevronDown, X } from "lucide-react";
 import { useStore } from "../stores/store";
+import { useBypass } from "../stores/bypass";
 
 type AgentId = "claude" | "opencode";
 
@@ -47,6 +48,7 @@ export default function TerminalPanel({
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const { contextRef, contextSnippets, removeContextSnippet, clearContextSnippets } = useStore();
+  const bypass = useBypass((s) => s.bypass);
 
   // Fetch available agents
   useEffect(() => {
@@ -116,6 +118,7 @@ export default function TerminalPanel({
     const params = new URLSearchParams({ agent });
     if (sketchId != null) params.set("sketch_id", String(sketchId));
     else if (curriculumId != null) params.set("curriculum_id", String(curriculumId));
+    if (bypass && agent === "claude") params.set("bypass", "1");
     const ws = new WebSocket(
       `${protocol}//${window.location.host}/ws/terminal?${params.toString()}`,
     );
@@ -193,7 +196,7 @@ export default function TerminalPanel({
       cleanupRef.current?.();
       cleanupRef.current = null;
     };
-  }, [started, agent, sketchId, curriculumId]);
+  }, [started, agent, sketchId, curriculumId, bypass]);
 
   const reconnect = useCallback(() => {
     setStarted(false);
@@ -260,6 +263,14 @@ export default function TerminalPanel({
                 connected ? "bg-green-400" : "bg-gray-500",
               )}
             />
+          )}
+          {bypass && agent === "claude" && (
+            <span
+              className="rounded bg-red-900/40 px-1.5 py-0.5 text-[10px] font-medium text-red-300"
+              title="Bypass permissions ON — Home 에서 설정 변경"
+            >
+              bypass
+            </span>
           )}
         </div>
         {started && (

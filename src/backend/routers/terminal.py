@@ -140,6 +140,7 @@ set -g status off
 set -sg escape-time 0
 set -g default-terminal "xterm-256color"
 set -g history-limit 50000
+set -g mouse on
 set-window-option -g aggressive-resize on
 """
 
@@ -286,12 +287,17 @@ def _build_spawn_command(
     sketch_id: int | None = None,
     curriculum_id: int | None = None,
     resume_session: str | None = None,
+    bypass: bool = False,
 ) -> list[str]:
     """Return the CLI command to spawn for the given agent type.
 
     sketch_id 나 curriculum_id 가 있으면 tmux 로 감싸서 WS 재연결 사이에 세션과
     스크롤백이 유지되게 한다. sketch 가 curriculum 보다 우선 (sketch 탭은 sketch
     세션만 가지면 됨). 둘 다 없으면 tmux 없이 일반 claude 프로세스로 돌림.
+
+    bypass=True 면 `--dangerously-skip-permissions` 를 붙여서 모든 권한 확인을
+    건너뛴다 (Claude Code 의 bypass permissions 모드). 새로 spawn 하는 경우에만
+    반영되고, 이미 살아있는 tmux 세션에 attach 할 때는 효과가 없다.
     """
     if agent == "opencode":
         _ensure_opencode_config()
@@ -300,6 +306,8 @@ def _build_spawn_command(
     _ensure_container_claude_md()
     mcp_config = _ensure_claude_mcp_config()
     claude_cmd = ["claude", "--mcp-config", str(mcp_config)]
+    if bypass:
+        claude_cmd.append("--dangerously-skip-permissions")
     if resume_session:
         claude_cmd += ["--resume", resume_session]
 
@@ -340,6 +348,7 @@ async def terminal_websocket(
     agent: str = Query(default="claude"),
     sketch_id: int | None = Query(default=None),
     curriculum_id: int | None = Query(default=None),
+    bypass: bool = Query(default=False),
 ):
     await ws.accept()
 
@@ -368,6 +377,7 @@ async def terminal_websocket(
         sketch_id=sketch_id if agent == "claude" else None,
         curriculum_id=curriculum_id if agent == "claude" else None,
         resume_session=resume_session,
+        bypass=bypass and agent == "claude",
     )
     binary = shutil.which(cmd[0])
     if not binary:

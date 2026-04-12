@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, GraduationCap, Compass, Sparkles, Layers, MessageSquare, PenLine, BookOpen, Microscope } from "lucide-react";
+import { Send, GraduationCap, Compass, Sparkles, Layers, MessageSquare, PenLine, BookOpen, Microscope, ShieldOff } from "lucide-react";
 import { cn } from "../lib/cn";
 import { useStore } from "../stores/store";
 import { useSketches } from "../stores/sketches";
+import { useBypass } from "../stores/bypass";
 
 interface HomeProps {
   className?: string;
@@ -24,6 +25,8 @@ const GREETINGS = [
 export default function Home({ className, onNavigate }: HomeProps) {
   const { topics, currentTopic, loadTopics, selectTopic } = useStore();
   const { create: createSketch } = useSketches();
+  const bypass = useBypass((s) => s.bypass);
+  const toggleBypass = useBypass((s) => s.toggle);
   const [greeting] = useState(() => GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -147,6 +150,34 @@ export default function Home({ className, onNavigate }: HomeProps) {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Bypass permissions 토글 — 여기서만 조절 가능. 토글 상태는 전역
+            스토어에 저장되어 모든 탭의 Claude Code 세션에 적용된다. */}
+        <div className="mt-10 flex items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500">
+          <button
+            onClick={toggleBypass}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-colors",
+              bypass
+                ? "border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                : "border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800",
+            )}
+            title={
+              bypass
+                ? "Claude Code 가 권한 확인 없이 실행됩니다 (--dangerously-skip-permissions). 새 세션부터 적용."
+                : "Claude Code 권한 확인 모드. 클릭해서 bypass 모드로 전환."
+            }
+          >
+            <ShieldOff size={11} />
+            <span>bypass permissions</span>
+            <span className={cn("ml-0.5 font-semibold", bypass ? "text-red-300" : "text-gray-500")}>
+              {bypass ? "ON" : "OFF"}
+            </span>
+          </button>
+          {bypass && (
+            <span className="text-[10px] text-gray-500">새 세션부터 적용</span>
+          )}
         </div>
       </div>
     </div>
