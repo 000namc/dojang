@@ -1,12 +1,3 @@
-FROM node:20-alpine AS frontend
-
-WORKDIR /build
-COPY src/frontend/package.json src/frontend/package-lock.json* ./
-RUN npm install
-COPY src/frontend/ .
-RUN npm run build
-
-
 FROM python:3.13-slim
 
 # Node.js (LTS) + Claude Code CLI + docker client + tmux + uv + gh.
@@ -39,7 +30,10 @@ RUN uv sync --no-dev --frozen 2>/dev/null || uv sync --no-dev
 
 COPY src/backend/ src/backend/
 COPY build/ build/
-COPY --from=frontend /build/dist static/
+# 프론트엔드 `dist/` 는 이미지에 굽지 않는다 — docker-compose.yml 에서
+# ../src/frontend/dist 를 /app/static 으로 bind-mount 해 호스트 빌드 결과가
+# 바로 반영되게 함. 호스트에서 `npm run build` 한 번 돌려서 dist/ 를
+# 만들어두는 게 첫 실행 전 필수 조건.
 
 # /root/.claude.json 을 별도 claude-config 볼륨으로 redirect — 호스트
 # ~/.claude.json 과 분리해서 macOS atomic-rewrite race / installMethod mismatch

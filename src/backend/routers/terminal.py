@@ -140,7 +140,11 @@ set -g status off
 set -sg escape-time 0
 set -g default-terminal "xterm-256color"
 set -g history-limit 50000
-set -g mouse on
+# mouse 는 끔 — 켜면 tmux 가 drag 이벤트까지 가로채 xterm 에서 텍스트 선택
+# (/login URL 복사 등) 이 불가능해진다. 휠 스크롤은 프론트엔드 TerminalPanel
+# 의 custom onWheel 핸들러가 로컬 xterm scrollback 으로 처리해서 화살표키
+# 대신 실제 스크롤이 되게 한다.
+set -g mouse off
 set-window-option -g aggressive-resize on
 """
 

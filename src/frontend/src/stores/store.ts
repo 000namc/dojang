@@ -8,6 +8,7 @@ import type {
 } from "../types";
 import * as api from "../api/client";
 import type { Curriculum, Notebook, KnowledgeCard, Checkpoint } from "../api/client";
+import { useSketches } from "./sketches";
 
 export type SelectedItemType = "exercise" | "knowledge" | null;
 
@@ -572,6 +573,15 @@ export const useStore = create<DojangState>((set, get) => ({
           if (data.event === "knowledge_updated") {
             await get().loadKnowledge();
             await get().refreshCurriculumTree();
+          }
+          if (data.event === "sketch_updated") {
+            const sk = useSketches.getState();
+            const currentId = sk.current?.id;
+            await sk.loadList();
+            // MCP 도구가 현재 열린 sketch 를 수정했으면 에디터 본문도 갱신.
+            // 사용자가 동시에 타이핑 중이어도 debounce flush 가 이미 서버에
+            // 반영된 뒤 Claude 가 append 하는 흐름이라 덮어써도 안전하다.
+            if (currentId != null) await sk.open(currentId);
           }
         }
       } catch {}

@@ -110,6 +110,24 @@ subject 에 지식 카드(노트) 저장. **한 subject 에는 2~4 개 카드를
 - `topic` (string)
 - `query` (string) — 검색어
 
+## 스케치 정리
+
+### update_sketch
+현재 열린 sketch (또는 지정한 sketch) 의 본문에 마크다운을 저장한다. Sketch 탭 우측 터미널 헤더의 "대화 정리" 버튼이 이 도구를 이용한다 — 학습자가 한 sketch 세션에서 이것저것 묻고 탐구한 뒤, 그 대화를 주제별로 묶어 노트로 남기는 용도.
+
+- `content` (string, required) — 저장할 마크다운
+- `sketch_id` (integer) — 생략하면 `data/current_context.md` 의 `@sketch:제목 #id` 에서 자동 추론
+- `mode` (string, default `append`) — `append`: 기존 노트 뒤에 `## 정리 YYYY-MM-DD HH:MM` 헤더 달고 덧붙임 (학습자가 쓰던 내용을 덮어쓰지 않으므로 안전). `replace`: 통째 교체 (명시 요청 시만).
+- `heading` (string) — `append` 모드에서 쓸 커스텀 헤더
+
+정리 지침 (도구 설명에도 들어있음):
+- 주제별로 `### 소주제` 섹션화 — 질문 시간순이 아니라 개념 단위로 묶기
+- 합의된 결론과 열린 질문 / 더 파볼 거리를 분리
+- 코드 스니펫 · 명령어 · 용어는 원문 그대로 유지
+- 학습자가 "아하" 한 비유나 언어는 살려두기
+
+저장 후 `_write_notify_file("sketch_updated")` 로 알림을 남기면 프론트가 폴링으로 감지해서 에디터 본문을 자동 새로고침한다.
+
 ## 커리큘럼 품질 점검
 
 ### review_curriculum

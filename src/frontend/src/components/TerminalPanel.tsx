@@ -4,7 +4,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { cn } from "../lib/cn";
-import { Play, RotateCcw, ChevronDown, X } from "lucide-react";
+import { Play, RotateCcw, ChevronDown, X, Sparkles } from "lucide-react";
 import { useStore } from "../stores/store";
 import { useBypass } from "../stores/bypass";
 
@@ -74,6 +74,11 @@ export default function TerminalPanel({
       cursorBlink: true,
       fontSize: 12,
       fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', monospace",
+      // Claude Code TUI 는 마우스 트래킹을 켜서 xterm 의 네이티브 드래그 선택을
+      // 막아버린다. macOS 에서 Option 을 누르고 드래그하면 트래킹을 우회해서
+      // 텍스트를 선택할 수 있게 — /login 때 뜨는 OAuth URL 복사에 필요.
+      macOptionClickForcesSelection: true,
+      rightClickSelectsWord: true,
       theme: {
         background: "#1a1b26",
         foreground: "#c0caf5",
@@ -100,6 +105,18 @@ export default function TerminalPanel({
     term.open(terminalRef.current);
     fitAddon.fit();
 
+    // tmux mouse off + Claude Code TUI 가 mouse tracking 을 안 쓰므로 xterm 이
+    // wheel 을 처리하면 기본적으로 ANSI 화살표키를 PTY 로 보낸다 → claude 채팅
+    // 히스토리 토글로 작동. 사용자 기대(=로컬 버퍼 스크롤) 와 달라서 capture
+    // 단계에서 가로채 xterm scrollback 을 직접 움직인다.
+    const onWheel = (ev: WheelEvent) => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      const step = ev.shiftKey ? 1 : 3;
+      term.scrollLines(Math.sign(ev.deltaY) * step);
+    };
+    term.element?.addEventListener("wheel", onWheel, { capture: true, passive: false });
+
     // xterm 은 기본적으로 Enter / Shift+Enter 를 구분 못하고 둘 다 \r 을 보내지만,
     // Claude Code 는 \r 을 "제출", \x1b\r (ESC+CR) 을 "줄바꿈" 으로 해석한다.
     // (VS Code terminal-setup 이 Shift+Enter 에 바인딩하는 시퀀스와 동일)
@@ -110,6 +127,22 @@ export default function TerminalPanel({
         }
         ev.preventDefault();
         return false;
+      }
+      // Cmd+C (macOS) / Ctrl+Shift+C (Linux/Win) 로 선택 영역 클립보드 복사.
+      // xterm.js 는 기본적으로 이 바인딩이 없어서 Option+drag 로 선택해도
+      // 클립보드에 안 들어간다. Claude Code 의 /login URL 같은 걸 뽑을 때 필수.
+      if (ev.type === "keydown" && ev.key === "c") {
+        const isCopyChord =
+          (ev.metaKey && !ev.ctrlKey && !ev.altKey && !ev.shiftKey) ||
+          (ev.ctrlKey && ev.shiftKey && !ev.altKey && !ev.metaKey);
+        if (isCopyChord) {
+          const sel = term.getSelection();
+          if (sel) {
+            navigator.clipboard.writeText(sel).catch(() => {});
+            ev.preventDefault();
+            return false;
+          }
+        }
       }
       return true;
     });
@@ -144,6 +177,10 @@ export default function TerminalPanel({
       setConnected(true);
       onActiveChange?.(true);
       sendResize();
+      // 세션 시작하자마자 키 입력을 받을 수 있게 xterm 에 포커스. setTimeout 으로
+      // 미루는 이유는 WS onopen 직후엔 아직 DOM 레이아웃이 안정화 안 된 경우가
+      // 있어서 — 다음 task 에서 focus 하면 안정적으로 커서가 잡힌다.
+      setTimeout(() => term.focus(), 0);
     };
 
     ws.onmessage = (event) => {
@@ -212,6 +249,23 @@ export default function TerminalPanel({
     }
   };
 
+  // Sketch 탭 전용 "대화 정리" 매직 프롬프트. 현재 세션에 바로 주입해서
+  // Claude 가 그간의 대화를 주제별로 묶어 `update_sketch` 로 저장하게 한다.
+  // 끝에 \r 을 붙여 자동 제출. append 모드 기본값이라 사용자의 기존 노트를
+  // 덮어쓰지 않는다.
+  const summarizeToSketch = () => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return;
+    const prompt =
+      "지금까지 이 세션에서 나눈 대화를 정리해서 `update_sketch` MCP 도구로 sketchpad 에 저장해줘. " +
+      "정리 원칙: (1) 질문 시간순이 아니라 개념별로 `###` 섹션으로 묶기, " +
+      "(2) '합의된 결론' 과 '열린 질문 / 더 파볼 거리' 를 분리해서 적기, " +
+      "(3) 중요한 코드 스니펫 · 명령어 · 용어는 원문 그대로 유지, " +
+      "(4) 내가 '아하' 했던 비유나 표현은 가급적 살려두기. " +
+      "sketch_id 는 current_context.md 에서 자동 추론되니까 생략해도 돼. " +
+      "mode 는 기본값 append 그대로.";
+    wsRef.current.send(JSON.stringify({ type: "input", data: prompt + "\r" }));
+  };
+
   const currentAgent = agents.find((a) => a.id === agent);
   const hasContext = contextRef || contextSnippets.length > 0;
 
@@ -273,15 +327,27 @@ export default function TerminalPanel({
             </span>
           )}
         </div>
-        {started && (
-          <button
-            onClick={reconnect}
-            className="rounded p-1 text-gray-500 hover:bg-gray-700 hover:text-gray-300"
-            title="새 세션"
-          >
-            <RotateCcw size={14} />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {started && connected && sketchId != null && (
+            <button
+              onClick={summarizeToSketch}
+              className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] text-pink-300 hover:bg-pink-500/10 transition-colors"
+              title="지금까지 대화를 주제별로 정리해서 sketchpad 에 저장"
+            >
+              <Sparkles size={12} />
+              대화 정리
+            </button>
+          )}
+          {started && (
+            <button
+              onClick={reconnect}
+              className="rounded p-1 text-gray-500 hover:bg-gray-700 hover:text-gray-300"
+              title="새 세션"
+            >
+              <RotateCcw size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Context chips */}

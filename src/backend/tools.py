@@ -1,9 +1,11 @@
 """도구 레지스트리 — Claude Code 세션이 MCP를 통해 호출하는 도구들."""
 
 import json
+import re
 import sqlite3
 import time
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 import docker
@@ -15,6 +17,7 @@ from mcp.types import Tool
 
 DB_PATH = Path(__file__).parent.parent.parent / "data" / "dojang.db"
 NOTIFY_FILE = Path(__file__).parent.parent.parent / "data" / ".notify"
+CONTEXT_FILE = Path(__file__).parent.parent.parent / "data" / "current_context.md"
 
 
 def get_db() -> sqlite3.Connection:
@@ -588,6 +591,56 @@ def _create_topic(args: dict) -> dict:
         db.close()
 
 
+_SKETCH_CONTEXT_RE = re.compile(r"@sketch:[^\n]*?#(\d+)")
+
+
+def _infer_active_sketch_id() -> int | None:
+    """data/current_context.md 의 `@sketch:... #<id>` 줄에서 현재 열린 sketch id 추출."""
+    if not CONTEXT_FILE.exists():
+        return None
+    m = _SKETCH_CONTEXT_RE.search(CONTEXT_FILE.read_text())
+    return int(m.group(1)) if m else None
+
+
+def _update_sketch(args: dict) -> dict:
+    sketch_id = args.get("sketch_id")
+    if sketch_id is None:
+        sketch_id = _infer_active_sketch_id()
+    if sketch_id is None:
+        return {"error": "sketch_id not provided and no @sketch entry in current_context.md"}
+
+    content = args.get("content", "")
+    mode = args.get("mode", "append")
+    heading = args.get("heading")
+
+    db = get_db()
+    try:
+        row = db.execute(
+            "SELECT id, content FROM sketches WHERE id = ?", (sketch_id,)
+        ).fetchone()
+        if not row:
+            return {"error": f"Sketch #{sketch_id} not found"}
+
+        if mode == "replace":
+            new_content = content
+        else:
+            existing = row["content"] or ""
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+            header = heading or f"## 정리 {ts}"
+            sep = "" if not existing else ("\n" if existing.endswith("\n\n") else ("\n" if existing.endswith("\n") else "\n\n"))
+            new_content = f"{existing}{sep}{header}\n\n{content.rstrip()}\n"
+
+        db.execute(
+            "UPDATE sketches SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (new_content, sketch_id),
+        )
+        db.commit()
+        _write_notify_file("sketch_updated")
+        return {"id": sketch_id, "mode": mode, "length": len(new_content), "status": "updated"}
+    finally:
+        db.close()
+
+
 # ---------------------------------------------------------------------------
 # Tool registry — single source of truth
 # ---------------------------------------------------------------------------
@@ -818,6 +871,49 @@ TOOL_REGISTRY: list[dict] = [
             "required": ["curriculum_id"],
         },
         "handler": _review_curriculum,
+    },
+    {
+        "name": "update_sketch",
+        "description": (
+            "현재 열린 sketch (또는 지정한 sketch) 에 마크다운을 저장합니다.\n\n"
+            "Sketch 탭에서 학습자와 길게 대화하며 개념을 탐구한 뒤, 그 대화 내용을 "
+            "정리해서 sketchpad 에 남길 때 사용하세요. 기본 동작은 **append** 로, "
+            "기존 노트 뒤에 `## 정리 YYYY-MM-DD HH:MM` 헤더를 달고 덧붙입니다. "
+            "사용자가 쓰던 노트를 덮어쓰지 않으므로 안전하게 호출할 수 있어요.\n\n"
+            "정리할 때 지침:\n"
+            "- 주제별로 묶어서 섹션화 (`### 소주제`) — 질문 시간순이 아니라 개념 단위\n"
+            "- **합의된 결론** 과 **열린 질문 / 더 파볼 거리** 를 분리\n"
+            "- 중요한 코드 스니펫 / 명령어 / 용어는 그대로 유지 (재구성하지 말 것)\n"
+            "- 학습자가 '아하' 한 순간의 비유나 언어를 살려두면 나중에 다시 떠올리기 쉬움\n\n"
+            "`sketch_id` 를 생략하면 `data/current_context.md` 의 `@sketch:... #id` "
+            "에서 자동 추론합니다. `mode='replace'` 는 기존 내용을 통째로 교체하므로 "
+            "사용자가 명시적으로 요청했을 때만 쓰세요."
+        ),
+        "schema": {
+            "type": "object",
+            "properties": {
+                "sketch_id": {
+                    "type": "integer",
+                    "description": "Sketch ID. 생략하면 current_context.md 에서 자동 추론.",
+                },
+                "content": {
+                    "type": "string",
+                    "description": "저장할 마크다운 본문.",
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": ["append", "replace"],
+                    "description": "append(기본): 헤더와 함께 뒤에 덧붙임. replace: 기존 내용 통째 교체.",
+                    "default": "append",
+                },
+                "heading": {
+                    "type": "string",
+                    "description": "append 모드에서 쓸 커스텀 헤더 (기본값은 '## 정리 YYYY-MM-DD HH:MM').",
+                },
+            },
+            "required": ["content"],
+        },
+        "handler": _update_sketch,
     },
     {
         "name": "create_topic",
